@@ -1019,7 +1019,44 @@
             const handleDeleteSpecial = (nick) => { if(confirm("삭제하시겠습니까?")) setSpecialCustomers(prev => { const next = { ...prev }; delete next[nick]; return next; }); };
             const handleCloudSave = async () => { openModal("저장하시겠습니까?", 'confirm', async () => { if (!googleScriptUrl) return; await fetch(googleScriptUrl, { method: 'POST', body: JSON.stringify({ action: 'backup_address', data: addresses, sheet_id: customerSheetId }), mode: 'no-cors', headers: {'Content-Type': 'text/plain;charset=utf-8'} }); openModal("전송 완료", 'alert'); }); };
             const handleCloudLoad = async () => { openModal("불러오시겠습니까?", 'confirm', async () => { if (!googleScriptUrl) return; const res = await fetch(`${googleScriptUrl}?action=get_addresses&t=${Date.now()}&sheet_id=${customerSheetId}`); const data = await res.json(); if(data && data.addresses) setAddresses(data.addresses); openModal("로드 완료", 'alert'); }); };
-            const handleExcelUpload = (e) => { const file = e.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = (evt) => { const wb = XLSX.read(evt.target.result, { type: 'binary' }); const ws = wb.Sheets[wb.SheetNames[0]]; const data = XLSX.utils.sheet_to_json(ws, { header: 1 }); const newAddrs = []; for(let i=1; i<data.length; i++) { if(data[i][0]) newAddrs.push({ nickname: data[i][0], realname: data[i][1]||'', phone: data[i][2]||'', zipcode: data[i][3]||'', address: data[i][4]||'', memo: data[i][5]||'' }); } setAddresses(prev => [...prev, ...newAddrs]); alert(`${newAddrs.length}명 추가됨`); }; reader.readAsBinaryString(file); e.target.value = ''; };
+            
+            // [수정] 엑셀 업로드 로직 (D열: 닉네임, F열: 이름, G열: 연락처, H열: 주소, I열: 배송메모)
+            const handleExcelUpload = (e) => { 
+                const file = e.target.files[0]; 
+                if (!file) return; 
+                const reader = new FileReader(); 
+                reader.onload = (evt) => { 
+                    const wb = XLSX.read(evt.target.result, { type: 'binary' }); 
+                    const ws = wb.Sheets[wb.SheetNames[0]]; 
+                    const data = XLSX.utils.sheet_to_json(ws, { header: 1 }); 
+                    const newAddrs = []; 
+                    
+                    for(let i=1; i<data.length; i++) { 
+                        const row = data[i];
+                        // 닉네임(D열, 인덱스 3)이 있을 경우에만 추가
+                        if(row && row[3]) { 
+                            newAddrs.push({ 
+                                nickname: String(row[3]).trim(), // D열
+                                realname: String(row[5] || '').trim(), // F열
+                                phone: String(row[6] || '').trim(), // G열
+                                zipcode: '', // 우편번호 컬럼 정보가 없어 공백 처리
+                                address: String(row[7] || '').trim(), // H열
+                                memo: String(row[8] || '').trim() // I열
+                            }); 
+                        } 
+                    } 
+                    setAddresses(prev => {
+                        // 중복 닉네임 제거 후 병합
+                        const existingNicks = new Set(newAddrs.map(a => a.nickname));
+                        const filteredPrev = prev.filter(a => !existingNicks.has(a.nickname));
+                        return [...filteredPrev, ...newAddrs];
+                    });
+                    alert(`${newAddrs.length}명의 고객 정보가 추가/갱신되었습니다.`); 
+                }; 
+                reader.readAsBinaryString(file); 
+                e.target.value = ''; 
+            };
+
              return (
                  <div className="flex h-full gap-4">
                      <div className="flex-1 flex flex-col bg-white rounded-lg shadow-sm border p-4 overflow-hidden">
