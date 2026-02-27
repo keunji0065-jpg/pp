@@ -3,578 +3,506 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cellina Cloud | 라벨 및 재고 시스템</title>
-    <!-- 라이브러리 로드 -->
+    <title>Cellina Cloud ERP | 전문 배합 관리 시스템</title>
     <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Nanum+Gothic:wght@400;700;800&family=Nanum+Myeongjo:wght@400;700;800&family=Noto+Sans+KR:wght@400;500;700;900&family=Black+Han+Sans&display=swap" rel="stylesheet">
+    <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
     <style>
+        :root {
+            --indigo: #4f46e5;
+            --slate-50: #f8fafc;
+            --slate-100: #f1f5f9;
+            --slate-200: #e2e8f0;
+            --slate-400: #94a3b8;
+            --slate-600: #475569;
+            --slate-800: #1e293b;
+        }
         body { 
-            font-family: 'Noto Sans KR', sans-serif; 
-            background-color: #cbd5e1; 
-            margin: 0; padding: 0; color: #1e293b;
-            overflow-x: hidden; 
+            font-family: "Pretendard Variable", Pretendard, sans-serif;
+            background-color: #f1f5f9; 
+            margin: 0; padding: 0; color: var(--slate-800);
+            letter-spacing: -0.025em;
+            -webkit-font-smoothing: antialiased;
+            font-size: 15px; /* 전체 글씨체 확대 */
         }
-        
-        /* 화면 미리보기용 A4 컨테이너 (화면에서만 상하좌우 5mm 유지) */
-        .a4-paper-container {
-            background: white;
-            box-shadow: 0 40px 80px rgba(0, 0, 0, 0.3);
-            flex-shrink: 0;
-            box-sizing: border-box;
-            margin: 40px auto;
-            position: relative;
-            width: 297mm;
-            min-height: 210mm;
-            padding: 5mm; 
-            transition: all 0.2s ease;
-            transform-origin: top center;
-        }
-
-        /* 🚨 인쇄 설정: 모든 방해 요소 및 여백을 0으로 완벽 제거 🚨 */
         @media print {
-            @page { 
-                size: A4 landscape; 
-                margin: 0 !important; /* 브라우저 기본 여백 완전 제거 */
-            }
             .no-print { display: none !important; }
-            
-            /* 첫 페이지 상단 여백의 주범인 flex 및 min-height 강제 해제 */
-            html, body, #root, .print-wrapper, main { 
-                background: white !important; 
-                display: block !important; 
-                position: static !important;
-                height: auto !important; 
-                min-height: 0 !important;
-                max-height: none !important;
-                width: 100% !important;
-                overflow: visible !important; 
-                margin: 0 !important; 
-                padding: 0 !important; 
-            }
-            
-            header { display: none !important; } 
-
-            .a4-paper-container { 
-                box-shadow: none !important; 
-                border: none !important; 
-                width: 100% !important; 
-                height: auto !important; 
-                min-height: 0 !important;
-                margin: 0 !important; 
-                padding: 0 !important; /* 사용자가 인쇄 설정으로 직접 조절할 수 있도록 0으로 설정 */
-                display: block !important;
-                position: relative !important;
-                overflow: visible !important;
-            }
-            
-            /* 박스가 페이지 중간에 찢어지지 않도록 강제 보호 */
-            .group\/box {
-                page-break-inside: avoid !important;
-                break-inside: avoid-page !important;
-                margin-bottom: 5mm !important; 
-                display: block !important;
-            }
-            
-            table { page-break-inside: auto !important; width: 100% !important; }
-            tr { page-break-inside: avoid !important; page-break-after: auto !important; }
-            
-            * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+            body { background: white !important; }
+            #paper { width: 100% !important; margin: 0 !important; padding: 0 !important; }
+            .card { box-shadow: none !important; border: 1px solid var(--slate-200) !important; }
         }
 
-        .tab-button {
-            padding: 12px 20px; font-weight: 800; font-size: 13px;
-            transition: all 0.3s; border-radius: 10px 10px 0 0;
-            position: relative; bottom: -1px; display: flex; align-items: center; gap: 6px;
+        /* 네비게이션 */
+        .nav-link { 
+            padding: 0 32px; height: 100%; display: flex; align-items: center; 
+            font-weight: 700; font-size: 15px; color: #94a3b8; 
+            transition: all 0.2s; cursor: pointer; position: relative;
         }
-        .tab-inactive { background: #0f172a; color: #64748b; }
-        .tab-active { background: #ffffff; color: #4f46e5; border: 1px solid #e2e8f0; border-bottom: 2px solid white; }
-
-        .cell-textarea {
-            width: 100%;
-            background: transparent;
-            border: none;
-            outline: none;
-            resize: none;
-            overflow: hidden;
-            line-height: 1.4;
-            padding: 8px 12px;
-            display: block;
-            white-space: pre-wrap;
-            word-break: break-all;
-            text-align: left; 
-            vertical-align: middle;
+        .nav-link:hover { color: #f1f5f9; background: rgba(255,255,255,0.05); }
+        .nav-link.active { color: white; }
+        .nav-link.active::after {
+            content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 4px;
+            background: var(--indigo); border-radius: 4px 4px 0 0;
         }
 
-        .animate-pop { animation: pop 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
-        @keyframes pop { 0% { transform: scale(0.98); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+        /* 카드 레이아웃 */
+        .card { background: white; border-radius: 16px; border: 1px solid var(--slate-200); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); overflow: hidden; }
         
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        td.v-middle { vertical-align: middle !important; }
-
-        .color-dot-sm {
-            width: 22px; height: 22px;
-            border-radius: 4px; cursor: pointer;
-            border: 1px solid rgba(0,0,0,0.15);
-            transition: all 0.2s;
+        /* 배합시트 전용 테이블 - 원료명 강조형 */
+        .formula-table { width: 100%; border-collapse: separate; border-spacing: 0; }
+        .formula-table th { 
+            background: #f8fafc; color: var(--slate-600); font-weight: 700; 
+            font-size: 13px; padding: 16px; border-bottom: 1px solid var(--slate-200); text-align: center;
         }
-        .color-dot-sm:hover { transform: scale(1.15); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+        .formula-table td { padding: 12px 14px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
+        .formula-table tr:hover td { background-color: #fcfdfe; }
+        
+        .input-base { 
+            width: 100%; border: 1.5px solid var(--slate-200); background: white; 
+            text-align: right; font-size: 15px; font-weight: 700; 
+            padding: 10px 14px; border-radius: 8px; transition: all 0.2s; outline: none;
+        }
+        .input-base:focus { border-color: var(--indigo); box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1); }
+        
+        .ghost-input {
+            width: 100%; border: none; background: transparent; text-align: center;
+            font-size: 15px; font-weight: 700; outline: none; padding: 10px 4px; border-radius: 6px;
+        }
+        .ghost-input:focus { background: white; box-shadow: inset 0 0 0 1.5px var(--indigo); }
+
+        /* 검증 표시 스타일 */
+        .v-info { display: flex; flex-direction: column; align-items: center; gap: 1px; }
+        .v-status { font-size: 12px; font-weight: 800; border-radius: 4px; }
+        .v-status-pass { color: #15803d; }
+        .v-status-fail { color: #b91c1c; font-weight: 900; }
+        .v-numbers { font-size: 11px; color: #64748b; font-weight: 500; }
+
+        .recipe-header-card { 
+            background: #fff; border-bottom: 1px solid var(--slate-100); 
+            padding: 32px; display: grid; grid-template-columns: 1fr auto; gap: 40px; align-items: end;
+        }
+
+        .config-box { background: #f8fafc; border-radius: 12px; padding: 20px; border: 1px solid var(--slate-200); }
+        .config-label { font-size: 12px; font-weight: 800; color: var(--slate-400); margin-bottom: 8px; display: block; }
+
+        .btn-add {
+            background: var(--indigo); color: white; padding: 12px 28px; border-radius: 10px;
+            font-weight: 700; font-size: 14px; transition: all 0.2s; cursor: pointer;
+        }
+        .btn-add:hover { transform: translateY(-1px); background: #4338ca; }
+
+        .trash-btn { color: #cbd5e1; transition: all 0.2s; cursor: pointer; font-size: 20px; }
+        .formula-table tr:hover .trash-btn { color: #f43f5e; }
+
+        .total-row { background-color: #f1f5f9 !important; }
+        .total-label { color: #475569; font-weight: 800; text-align: right; padding-right: 24px; font-size: 13px; }
+        .total-value { color: var(--slate-800); font-weight: 900; font-size: 17px; }
+
+        .custom-scroll::-webkit-scrollbar { width: 6px; height: 6px; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
     </style>
 </head>
 <body>
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState, useEffect, useMemo, useRef, useCallback } = React;
+        const { useState, useEffect, useMemo } = React;
 
-        // 🚨 흰색 및 중복되는 회색을 완벽히 제거한 다채로운 30가지 색상 🚨
-        const PRESET_COLORS = [
-            "#ef4444", "#f97316", "#f59e0b", "#eab308", "#84cc16", 
-            "#22c55e", "#10b981", "#14b8a6", "#06b6d4", "#0ea5e9",
-            "#3b82f6", "#6366f1", "#8b5cf6", "#a855f7", "#d946ef",
-            "#ec4899", "#f43f5e", "#b91c1c", "#c2410c", "#b45309",
-            "#4d7c0f", "#15803d", "#047857", "#0f766e", "#0e7490",
-            "#0369a1", "#1d4ed8", "#4338ca", "#be185d", "#000000"
-        ];
-
-        const ICON_PATHS = {
-            'cloud': <path d="M17.5 19c2.5 0 4.5-2 4.5-4.5 0-2.3-1.7-4.1-3.9-4.4C17.6 6.5 14.1 4 10 4 6.4 4 3.4 6.3 2.2 9.5 0.9 10.4 0 11.9 0 13.5 0 16.5 2.5 19 5.5 19h12z"/>,
-            'search': <><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></>,
-            'printer': <><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></>,
-            'plus': <><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></>,
-            'trash': <><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></>,
-            'x': <><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></>,
-            'save': <><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></>,
-            'refresh': <><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></>,
-            'settings': <><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></>,
-            'palette': <><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></>,
-            'folder-plus': <><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1-2-2h5l2 3h9a2 2 0 0 1 2 2z"/><line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/></>
-        };
-
-        const DEFAULT_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyE_S_2HKvPX6R3lRLZ_z6bI-RLxgX3E4D3oZziAEBHRcqRUWGXakX2NeMcRgl4VZbk/exec";
-        const DEFAULT_SHEET_URL = "https://docs.google.com/spreadsheets/d/1bC9nm1nAUjHV1L3-B5o8wUO1VpvjFXElN4CPquxZBgU/edit?usp=sharing";
-
-        const INITIAL_DATA = {
-            sample: { 
-                title: "샘플 목록", printCols: 2, orientation: "landscape", fontSize: 13, titleFontSize: 16, fontFamily: "'Noto Sans KR', sans-serif",
-                items: [{ id: Date.now(), cat: "기본분류", name: "샘플 제품명", origin: "국산", vendor: "기본 공급처", checked: false }], 
-                themes: { "기본분류": "#3b82f6" }, order: ["기본분류"]
+        const FOOD_TYPES = ["혼합음료", "음료베이스(분말)", "음료베이스(액상)", "기타가공품", "체중조절용조제식품"];
+        
+        const FOOD_CODE_DB = {
+            "수크랄로스": { 
+                limits: { "혼합음료": 0.4, "음료베이스(분말)": 0.4, "음료베이스(액상)": 0.4, "기타가공품": 0.5, "체중조절용조제식품": 1.25 },
+                warning: "명칭 및 용도 함께 표시 (예: 수크랄로스(감미료))"
             },
-            carton: { 
-                title: "카톤박스", printCols: 2, orientation: "landscape", fontSize: 13, titleFontSize: 16, fontFamily: "'Noto Sans KR', sans-serif",
-                items: [{ id: Date.now()+1, cat: "생산라벨", name: "박스 제품명", origin: "", vendor: "2026.12.31", checked: false }], 
-                themes: { "생산라벨": "#ef4444" }, order: ["생산라벨"]
+            "아스파탐": { 
+                limits: { "혼합음료": 0.6, "음료베이스(분말)": 0.6, "음료베이스(액상)": 0.6, "기타가공품": 0.6, "체중조절용조제식품": 1.0 },
+                warning: "⚠️ '페닐알라닌 함유' 주의문구 표시 필수\n※ 명칭 및 용도 함께 표시 (예: 아스파탐(감미료))"
+            },
+            "아세설팜칼륨": { 
+                limits: { "혼합음료": 0.35, "음료베이스(분말)": 0.35, "음료베이스(액상)": 0.35, "기타가공품": 0.35, "체중조절용조제식품": 0.45 },
+                warning: "명칭 및 용도 함께 표시 (예: 아세설팜칼륨(감미료))"
+            },
+            "사카린나트륨": { 
+                limits: { "혼합음료": 0.2, "음료베이스(분말)": 1.2, "음료베이스(액상)": 0.2, "기타가공품": 0.0, "체중조절용조제식품": 1.2 },
+                warning: "명칭 및 용도 함께 표시 (예: 사카린나트륨(감미료))"
+            },
+            "스테비올배당체": { 
+                limits: { "혼합음료": 0.2, "음료베이스(분말)": 0.6, "음료베이스(액상)": 0.2, "기타가공품": 0.2, "체중조절용조제식품": 0.2 },
+                warning: "명칭 및 용도 함께 표시 (예: 스테비올배당체(감미료))"
+            },
+            "효소처리스테비아": { 
+                limits: { "혼합음료": 999, "음료베이스(분말)": 999, "음료베이스(액상)": 999, "기타가공품": 999, "체중조절용조제식품": 999 },
+                warning: "명칭 및 용도 함께 표시 (예: 효소처리스테비아(감미료))"
+            },
+            "에리스리톨": { 
+                limits: { "혼합음료": 999, "음료베이스(분말)": 999, "음료베이스(액상)": 999, "기타가공품": 999, "체중조절용조제식품": 999 },
+                warning: "⚠️ 당알코올류: '과량 섭취 시 설사를 일으킬 수 있습니다' 주의문구 표시 권장"
+            },
+            "알룰로스": { 
+                limits: { "혼합음료": 999, "음료베이스(분말)": 999, "음료베이스(액상)": 999, "기타가공품": 999, "체중조절용조제식품": 999 },
+                warning: "⚠️ 당알코올류: '과량 섭취 시 설사를 일으킬 수 있습니다' 주의문구 표시 권장"
             }
         };
 
-        const EditableTitle = ({ initialValue, onSave, className = "", style = {} }) => {
-            const [val, setVal] = useState(initialValue);
-            const [isEditing, setIsEditing] = useState(false);
-            useEffect(() => { setVal(initialValue); }, [initialValue]);
-            const handleBlur = () => { 
-                setIsEditing(false);
-                if (val !== initialValue && val.trim()) onSave(val); 
-                else setVal(initialValue);
-            };
-            return (
-                <div className={`relative flex items-center group/edit ${className}`}>
-                    <input 
-                        value={val} onChange={e => setVal(e.target.value)}
-                        onFocus={() => setIsEditing(true)} onBlur={handleBlur}
-                        onKeyDown={e => e.key === 'Enter' && e.target.blur()}
-                        style={style}
-                        className={`outline-none bg-transparent transition-all rounded px-3 w-full font-black text-left ${isEditing ? 'bg-white/20 ring-1 ring-white/50' : 'cursor-text hover:bg-white/10'}`} 
-                    />
-                </div>
-            );
+        const INITIAL_DATA = {
+            formula_sheet: { 
+                title: "배합시트", 
+                headers: ['번호', '원료명 및 성분명', '배합중량(g)', '배합비(%)', '식품공전 검증 현황'], 
+                items: [
+                    { id: 100, cat: "핵심 레시피", name: "정제수 (베이스)", weight: 998, ratio: 99.8 },
+                    { id: 101, cat: "핵심 레시피", name: "수크랄로스", weight: 2, ratio: 0.2 }
+                ], 
+                order: ["핵심 레시피"], 
+                recipeMeta: { "핵심 레시피": { foodType: "음료베이스(액상)", productWeight: 1000, productSample: 10, waterSample: 200 } } 
+            },
+            nutrition_worksheet: {
+                title: "영양정보",
+                items: [
+                    { id: 'n1', name: '열량', key: 'cal', unit: 'kcal', value: 0, options: ['그대로 선택', '5kcal단위 표시', '5kcal미만 "0"표시'], selected: 2, guide: '법규: 5kcal 단위 표시 (5미만 "0")\n① 저: 100g당 40kcal 미만 / 무: 100ml당 4kcal 미만', dv: 2000 },
+                    { id: 'n2', name: '나트륨', key: 'na', unit: 'mg', value: 0, options: ['그대로 선택', '5/10mg단위 표시', '5mg미만 "0"표시'], selected: 2, guide: '법규: 120mg 이하 5단위, 초과 10단위\n① 저: 120mg 미만 / 무: 5mg 미만', dv: 2000 },
+                    { id: 'n3', name: '탄수화물', key: 'carb', unit: 'g', value: 0, options: ['그대로 선택', '1g단위 표시', '0.5g미만 "0"표시'], selected: 2, guide: '법규: 1g 단위 표시 (0.5미만 "0")', dv: 324 },
+                    { id: 'n4', name: '당류', key: 'sug', unit: 'g', value: 0, options: ['그대로 선택', '1g단위 표시', '0.5g미만 "0"표시'], selected: 2, guide: '법규: 1g 단위 표시 (0.5미만 "0")\n① 저: 100g당 5g 미만 / 무: 100g당 0.5g 미만', dv: 100 },
+                    { id: 'n5', name: '단백질', key: 'pro', unit: 'g', value: 0, options: ['그대로 선택', '1g단위 표시', '0.5g미만 "0"표시'], selected: 1, guide: '법규: 1g 단위 표시 (0.5미만 "0")\n① 함유: 기준치 10% 이상 / 고: 기준치 20% 이상', dv: 55 },
+                    { id: 'n6', name: '지방', key: 'fat', unit: 'g', value: 0, options: ['그대로 선택', '0.1g/1g단위', '0.5g미만 "0"표시'], selected: 2, guide: '법규: 5g이하 0.1g 단위 (0.5미만 "0")\n① 저: 100g당 3g 미만 / 무: 100g당 0.5g 미만', dv: 54 },
+                    { id: 'n7', name: '포화지방', key: 'sfat', unit: 'g', value: 0, options: ['그대로 선택', '0.1g/1g단위', '0.5g미만 "0"표시'], selected: 2, guide: '법규: 5g이하 0.1g 단위 (0.5미만 "0")', dv: 15 },
+                    { id: 'n8', name: '트랜스지방', key: 'tfat', unit: 'g', value: 0, options: ['그대로 선택', '0.5g미만 "0"표시', '0.2g미만 표기'], selected: 1, guide: '법규: 0.5g 미만 "0" 표시 (0.2g 미만 "0.2g미만" 가능)', dv: 0 },
+                    { id: 'n9', name: '콜레스테롤', key: 'chol', unit: 'mg', value: 0, options: ['그대로 선택', '5mg단위 표시', '2mg미만 "0"표시'], selected: 2, guide: '법규: 5mg 단위 표시 (2미만 "0")\n① 저: 100g당 20mg 미만 / 무: 100g당 5mg 미만', dv: 300 }
+                ]
+            },
+            test_report: { title: "시험성적서", headers: ['의뢰일자', '제품명', '식품유형', '판정'], keys: ['date', 'name', 'type', 'status'], items: [], order: ["히스토리"] },
+            sample_list: { title: "샘플목록", headers: ['품목명', '원산지', '공급사'], keys: ['name', 'origin', 'vendor'], items: [], order: ["보관 샘플"] }
         };
-
-        const Icon = ({ name, size = 20, className = "" }) => (
-            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-                {ICON_PATHS[name] || <circle cx="12" cy="12" r="10" />}
-            </svg>
-        );
-
-        const ComplexColorPicker = ({ label, colorKey, currentColor, onColorSelect }) => (
-            <div className="space-y-3 p-4 bg-white border border-slate-200 rounded-2xl shadow-sm">
-                <div className="flex justify-between items-center mb-1">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{label}</label>
-                    <div className="relative group">
-                        <input type="color" value={currentColor} onChange={e => onColorSelect(colorKey, e.target.value)} className="w-6 h-6 p-0 border-0 cursor-pointer bg-transparent opacity-0 absolute inset-0 z-10" />
-                        <div className="w-6 h-6 rounded-full border border-slate-300 flex items-center justify-center bg-slate-50 group-hover:bg-white transition-all shadow-sm"><Icon name="palette" size={12} className="text-indigo-500" /></div>
-                    </div>
-                </div>
-                <div className="grid grid-cols-6 gap-1.5">
-                    {PRESET_COLORS.map(c => (
-                        <div key={c} className={`color-dot-sm ${currentColor.toUpperCase() === c.toUpperCase() ? 'ring-2 ring-indigo-500 ring-offset-2' : ''}`} style={{ backgroundColor: c }} onClick={() => onColorSelect(colorKey, c)} />
-                    ))}
-                </div>
-            </div>
-        );
 
         const App = () => {
             const [tabData, setTabData] = useState(() => {
-                const saved = localStorage.getItem('cellina_inventory_final_v59');
+                const saved = localStorage.getItem('cellina_erp_v170_clean');
                 return saved ? JSON.parse(saved) : INITIAL_DATA;
             });
-            const [scriptUrl, setScriptUrl] = useState(() => localStorage.getItem('cellina_script_url') || DEFAULT_SCRIPT_URL);
-            const [sheetUrl, setSheetUrl] = useState(() => localStorage.getItem('cellina_sheet_url') || DEFAULT_SHEET_URL);
+            const [activeTab, setActiveTab] = useState("formula_sheet");
 
-            const [activeTab, setActiveTab] = useState("sample");
-            const [searchTerm, setSearchTerm] = useState("");
-            const [labelModal, setLabelModal] = useState(null);
-            const [isConfigOpen, setIsConfigOpen] = useState(false);
-            const [isFetching, setIsFetching] = useState(false);
+            useEffect(() => { localStorage.setItem('cellina_erp_v170_clean', JSON.stringify(tabData)); }, [tabData]);
 
-            const tabNameMapping = { 'sample': '샘플목록', 'carton': '카톤박스' };
+            const current = tabData[activeTab] || INITIAL_DATA[activeTab];
+            const updateData = (updates) => { setTabData(prev => ({ ...prev, [activeTab]: { ...prev[activeTab], ...updates } })); };
 
-            useEffect(() => {
-                localStorage.setItem('cellina_inventory_final_v59', JSON.stringify(tabData));
-                localStorage.setItem('cellina_script_url', scriptUrl.trim());
-                localStorage.setItem('cellina_sheet_url', sheetUrl.trim());
-            }, [tabData, scriptUrl, sheetUrl]);
-
-            const current = tabData[activeTab];
-
-            const filteredItems = useMemo(() => {
-                const term = searchTerm.toLowerCase();
-                if (!term) return current.items;
-                return current.items.filter(item => 
-                    item.name.toLowerCase().includes(term) || 
-                    item.cat.toLowerCase().includes(term) ||
-                    item.vendor.toLowerCase().includes(term)
-                );
-            }, [current.items, searchTerm]);
-
-            const updateCurrentData = (updates) => {
-                setTabData(prev => ({ ...prev, [activeTab]: { ...prev[activeTab], ...updates } }));
-            };
-
-            const editItem = (id, f, v) => {
-                updateCurrentData({ items: current.items.map(i => i.id === id ? { ...i, [f]: v } : i) });
-            };
-
-            const renameCategory = (oldName, newName) => {
-                if (!newName || oldName === newName) return;
-                const nextItems = current.items.map(i => i.cat === oldName ? { ...i, cat: newName } : i);
-                const nextOrder = current.order.map(c => c === oldName ? newName : c);
-                const nextThemes = { ...current.themes };
-                if (nextThemes[oldName]) {
-                    nextThemes[newName] = nextThemes[oldName];
-                    delete nextThemes[oldName];
+            // 영양정보 계산 로직 공통화
+            const calculateNutri = (it) => {
+                const val = Number(it.value) || 0;
+                const opt = it.options[it.selected];
+                if (opt.includes('0표시')) {
+                    if (it.key === 'cal' && val < 5) return "0";
+                    if (it.key === 'na' && val < 5) return "0";
+                    if (it.key === 'chol' && val < 2) return "0";
+                    if (['carb', 'sug', 'pro', 'fat', 'sfat', 'tfat'].includes(it.key) && val < 0.5) return "0";
                 }
-                updateCurrentData({ items: nextItems, order: nextOrder, themes: nextThemes });
+                if (opt.includes('5kcal')) return Math.round(val / 5) * 5;
+                if (opt.includes('5/10mg')) return val <= 120 ? Math.round(val / 5) * 5 : Math.round(val / 10) * 10;
+                if (opt.includes('1g단위')) return Math.round(val);
+                if (opt.includes('0.1g/1g단위')) return val <= 5 ? val.toFixed(1) : Math.round(val);
+                if (opt.includes('5mg단위')) return Math.round(val / 5) * 5;
+                if (opt.includes('0.2g미만')) return val < 0.2 ? "0.2 미만" : val.toFixed(1);
+                return val % 1 === 0 ? val.toString() : val.toFixed(1);
             };
 
-            const addNewCategory = () => {
-                const newCatName = prompt("새로운 분류명을 입력하세요.");
-                if (!newCatName || current.order.includes(newCatName)) return;
-                const nextOrder = [newCatName, ...current.order];
-                const nextThemes = { ...current.themes };
-                nextThemes[newCatName] = PRESET_COLORS[nextOrder.length % PRESET_COLORS.length];
-                const newItem = { id: Date.now(), cat: newCatName, name: "", origin: "", vendor: "", checked: false };
-                updateCurrentData({ items: [newItem, ...current.items], order: nextOrder, themes: nextThemes });
-            };
-
-            const fetchDataFromSheet = async () => {
-                const cScript = scriptUrl.trim();
-                const cSheet = sheetUrl.trim();
-                if (!cScript || !cSheet) { alert("환경설정에서 주소를 입력해주세요."); return; }
-                setIsFetching(true);
-                try {
-                    const sTab = tabNameMapping[activeTab];
-                    const fetchUrl = `${cScript}?action=read&tab=${encodeURIComponent(sTab)}&sheetUrl=${encodeURIComponent(cSheet)}&t=${Date.now()}`;
-                    const res = await fetch(fetchUrl);
-                    const text = await res.text();
-                    if (text.trim().startsWith("<!DOCTYPE")) throw new Error("권한 오류: 스크립트 배포 시 액세스 권한을 '모든 사용자'로 설정하세요.");
-                    const data = JSON.parse(text);
-                    if (data && Array.isArray(data)) {
-                        const dataRows = data.slice(1);
-                        const validRows = dataRows.filter(row => row[0] || row[1]);
-                        const newItems = validRows.map((row, idx) => ({
-                            id: Date.now() + idx, cat: row[0] ? String(row[0]).trim() : "기본",
-                            name: row[1] ? String(row[1]).trim() : "", origin: row[2] ? String(row[2]).trim() : "",
-                            vendor: row[3] ? String(row[3]).trim() : "", checked: false
-                        }));
-                        const uniqueCats = [...new Set(newItems.map(i => i.cat))];
-                        const newThemes = { ...current.themes };
-                        uniqueCats.forEach((c, i) => { if(!newThemes[c]) newThemes[c] = PRESET_COLORS[i % PRESET_COLORS.length]; });
-                        updateCurrentData({ items: newItems, order: uniqueCats, themes: newThemes });
-                        alert(`✅ [${sTab}] 동기화 완료!`);
-                    }
-                } catch (err) { alert("⚠️ 연동 실패: " + err.message); }
-                setIsFetching(false);
-            };
-
-            const pushToGoogleSheet = async () => {
-                const cScript = scriptUrl.trim();
-                const cSheet = sheetUrl.trim();
-                if (!cScript || !cSheet) { alert("환경설정에서 주소를 입력해주세요."); return; }
-                try {
-                    const pushData = current.items.map(item => [item.cat, item.name, item.origin || "", item.vendor || ""]);
-                    pushData.unshift(["분류", "제품명", "원산지", "공급처"]);
-                    const sTab = tabNameMapping[activeTab];
-                    const payload = { tab: sTab, sheetUrl: cSheet, data: pushData };
-                    await fetch(cScript, { method: "POST", body: JSON.stringify(payload) });
-                    alert(`✅ [${sTab}] 저장 완료!`);
-                } catch (err) { alert("⚠️ 저장 실패: " + err.message); }
-            };
-
-            const openLabelMaker = (item) => {
-                const isSingle = item.cat === '박스라벨';
-                const footerTextVal = activeTab === 'carton' ? item.vendor : `${item.origin} / ${item.vendor}`;
-                const config = item.labelSettings || {
-                    mainText: item.name, footerText: isSingle ? "" : footerTextVal,
-                    bgTop: "#EF4444", bgBottom: "#FFFFFF", colorTop: "#FFFFFF", colorBottom: "#000000",
-                    fontFamily: "'Noto Sans KR', sans-serif", mainSize: 140, footerSize: 90, isSingleZone: isSingle
+            const getValidationDetail = (name, weight, total, type, ps, ws) => {
+                const entry = FOOD_CODE_DB[name];
+                if (!entry || !type) return { status: 'none' };
+                const limit = entry.limits[type] ?? 999;
+                const ratio = Number(weight) / Number(total);
+                const finalWeight = Number(ps) + Number(ws);
+                const conc = (Number(ps) * ratio) / (finalWeight / 1000);
+                const isFail = limit < 999 && conc > limit;
+                
+                return { 
+                    status: isFail ? 'fail' : 'pass', 
+                    current: conc.toFixed(3), 
+                    limit: limit === 999 ? '제한없음' : limit.toFixed(3),
+                    warning: entry.warning
                 };
-                setLabelModal({ ...config, itemId: item.id });
             };
 
-            const saveLabelSettings = () => {
-                updateCurrentData({ items: current.items.map(i => i.id === labelModal.itemId ? { ...i, name: labelModal.mainText, labelSettings: { ...labelModal } } : i) });
-                alert("라벨 설정이 로컬에 저장되었습니다.");
-            };
+            const handleFormulaItem = (id, key, val, cat) => {
+                const meta = current.recipeMeta[cat];
+                const total = Number(meta.productWeight);
+                
+                let nextItems = [...current.items];
+                const targetIndex = nextItems.findIndex(i => i.id === id);
+                if (targetIndex === -1) return;
 
-            // 🚨 핵심: 글자 크기와 엔터 횟수를 픽셀 단위로 정밀 추적하여 정확한 시점에 박스를 나누는 완벽한 로직 🚨
-            const groupedBlocks = useMemo(() => {
-                // A4 용지 규격을 기반으로 내부 여백을 고려한 '최대 가용 픽셀 높이' 설정 (보수적으로 잡아 넘침 완전 방지)
-                const availableHeight = current.orientation === 'landscape' ? 720 : 1060; 
-                const headerHeight = 85; // 분류 제목 + 테이블 헤더(V, 제품명 등)의 기본 높이
+                // 1. 선택한 원료의 값 업데이트 (중량 <-> 비율 동기화)
+                let upd = { ...nextItems[targetIndex], [key]: val };
+                if (key === 'weight') {
+                    upd.ratio = total > 0 ? ((Number(val) / total) * 100).toFixed(3) : 0;
+                } else if (key === 'ratio') {
+                    upd.weight = total > 0 ? (total * (Number(val) / 100)).toFixed(4) : 0;
+                }
+                nextItems[targetIndex] = upd;
 
-                let result = [];
-                current.order.forEach(cat => {
-                    const catItems = filteredItems.filter(i => i.cat === cat);
+                // 2. 오토 밸런싱: 1번 항목(베이스) 자동 증감 로직
+                // 조건: 변경한 항목이 첫 번째 항목(베이스)이 아니고, 값이 중량이나 비율일 때
+                const catItems = nextItems.filter(i => i.cat === cat);
+                if (catItems.length > 1 && catItems[0].id !== id && (key === 'weight' || key === 'ratio')) {
+                    const firstItemId = catItems[0].id;
                     
-                    if (!searchTerm && catItems.length === 0) {
-                        result.push({ id: `${cat}-empty`, title: cat, originalCat: cat, items: [], theme: current.themes[cat] });
-                    } else if (catItems.length > 0) {
-                        let currentChunk = [];
-                        let currentHeight = headerHeight;
-                        let chunkIndex = 1;
+                    // 1번 항목을 제외한 나머지 원료의 배합중량 총합 계산
+                    const sumOthers = catItems.reduce((acc, curr) => {
+                        return curr.id !== firstItemId ? acc + Number(curr.weight || 0) : acc;
+                    }, 0);
 
-                        catItems.forEach(item => {
-                            // 각 셀마다 사용자가 친 엔터(줄바꿈) 개수를 파악하여 가장 줄이 많은 값을 찾음
-                            const nameLines = item.name ? item.name.split('\n').length : 1;
-                            const originLines = item.origin ? item.origin.split('\n').length : 1;
-                            const vendorLines = item.vendor ? item.vendor.split('\n').length : 1;
-                            const maxLines = Math.max(nameLines, originLines, vendorLines);
-
-                            // 해당 아이템이 차지하는 실제 높이(픽셀)를 수학적으로 계산
-                            // 기본 패딩 16px + (줄 수 * 글자크기 * 줄간격 1.4) + 테두리 1px
-                            const rowHeight = 16 + (maxLines * current.fontSize * 1.4) + 1;
-
-                            // 박스에 이 아이템을 추가했을 때 가용 높이를 초과하면? -> 새 박스 생성!
-                            if (currentHeight + rowHeight > availableHeight && currentChunk.length > 0) {
-                                result.push({
-                                    id: `${cat}-${chunkIndex}`,
-                                    title: cat, // 👈 요청하신대로 (계속) 삭제. 원본 이름만 노출.
-                                    originalCat: cat,
-                                    items: currentChunk,
-                                    theme: current.themes[cat]
-                                });
-                                currentChunk = [item];
-                                currentHeight = headerHeight + rowHeight;
-                                chunkIndex++;
-                            } else {
-                                currentChunk.push(item);
-                                currentHeight += rowHeight;
-                            }
-                        });
-
-                        // 쪼개고 남은 나머지 아이템들 처리
-                        if (currentChunk.length > 0) {
-                            result.push({
-                                id: `${cat}-${chunkIndex}`,
-                                title: cat, // 👈 (계속) 삭제 유지
-                                originalCat: cat,
-                                items: currentChunk,
-                                theme: current.themes[cat]
-                            });
-                        }
+                    // 목표 생산량에서 나머지 총합을 뺀 값을 1번 항목에 할당 (+/- 보정)
+                    const newFirstWeight = total - sumOthers;
+                    
+                    const firstItemIndex = nextItems.findIndex(i => i.id === firstItemId);
+                    if (firstItemIndex !== -1) {
+                        nextItems[firstItemIndex] = {
+                            ...nextItems[firstItemIndex],
+                            weight: newFirstWeight.toFixed(4),
+                            ratio: total > 0 ? ((newFirstWeight / total) * 100).toFixed(3) : 0
+                        };
                     }
-                });
-                return result;
-            }, [current.items, current.fontSize, current.orientation, current.order, current.themes, filteredItems, searchTerm]);
+                }
+
+                updateData({ items: nextItems });
+            };
 
             return (
-                <div className="h-screen flex flex-col overflow-hidden print-wrapper">
-                    <header className="no-print bg-slate-900 text-white z-50 shrink-0 border-b border-slate-700">
-                        <div className="max-w-[1600px] mx-auto p-3 flex justify-between items-center gap-4">
-                            <div className="flex items-center gap-2">
-                                <Icon name="cloud" className="text-indigo-400" />
-                                <h1 className="text-md font-black tracking-tighter uppercase italic">Cellina Cloud</h1>
-                            </div>
-
-                            {!labelModal && (
-                                <div className="flex-1 max-w-md relative group">
-                                    <Icon name="search" size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                                    <input type="text" placeholder="통합 검색..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full bg-slate-800 border-none rounded-xl pl-9 pr-10 py-2 text-xs outline-none focus:ring-2 ring-indigo-500 focus:bg-slate-950 transition-all" />
-                                </div>
-                            )}
-
-                            <div className="flex items-center gap-2">
-                                {!labelModal ? (
-                                    <div className="flex bg-slate-800 rounded-lg p-1 gap-3 items-center px-4 border border-slate-700">
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-[9px] font-bold text-slate-500">TIT</span>
-                                            <input type="range" min="10" max="35" value={current.titleFontSize} onChange={e => updateCurrentData({ titleFontSize: parseInt(e.target.value) })} className="w-16 h-1 accent-indigo-500" />
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-[9px] font-bold text-slate-500">TXT</span>
-                                            <input type="range" min="8" max="25" value={current.fontSize} onChange={e => updateCurrentData({ fontSize: parseInt(e.target.value) })} className="w-16 h-1 accent-emerald-500" />
-                                        </div>
-                                    </div>
-                                ) : null}
-
-                                {!labelModal && <button onClick={addNewCategory} className="bg-indigo-600 hover:bg-indigo-500 px-3 py-2 rounded-lg font-bold text-[11px] flex items-center gap-2 transition-all shadow-lg shadow-indigo-500/20"><Icon name="folder-plus" size={12} /> 분류 추가</button>}
-                                
-                                <button onClick={fetchDataFromSheet} className="bg-slate-700 hover:bg-slate-600 px-3 py-2 rounded-lg font-bold text-[11px] flex items-center gap-2 transition-all"><Icon name="refresh" size={12} className={isFetching ? "animate-spin" : ""} /> {labelModal ? "시트 갱신" : "갱신"}</button>
-                                <button onClick={pushToGoogleSheet} className="bg-blue-600 hover:bg-blue-500 px-4 py-2 rounded-lg font-bold text-[11px] flex items-center gap-2 shadow-lg shadow-blue-500/20"><Icon name="save" size={12} /> {labelModal ? "시트 저장" : "저장"}</button>
-
-                                {!labelModal ? (
-                                    <>
-                                        <button onClick={() => window.print()} className="bg-white text-slate-900 px-4 py-2 rounded-lg font-black text-[11px] flex items-center gap-2 hover:bg-slate-100 transition-colors"><Icon name="printer" size={12} /> 인쇄</button>
-                                        <button onClick={() => setIsConfigOpen(!isConfigOpen)} className="p-2 text-slate-400 hover:text-white transition-colors"><Icon name="settings" /></button>
-                                    </>
-                                ) : (
-                                    <>
-                                        <button onClick={() => window.print()} className="bg-white text-slate-900 px-4 py-2 rounded-lg font-black text-[11px] flex items-center gap-2 hover:bg-slate-100 transition-colors"><Icon name="printer" size={12} /> 라벨 인쇄</button>
-                                        <button onClick={() => setLabelModal(null)} className="bg-red-500 hover:bg-red-400 px-4 py-2 rounded-lg font-bold text-[11px] text-white flex items-center gap-2 transition-colors"><Icon name="x" size={12} /> 에디터 닫기</button>
-                                    </>
-                                )}
-                            </div>
-                        </div>
-
-                        {isConfigOpen && (
-                            <div className="absolute top-16 right-6 bg-slate-800 border border-slate-700 p-5 rounded-2xl w-[400px] shadow-2xl animate-pop no-print z-50">
-                                <label className="text-[10px] font-bold text-slate-500 block mb-1">API URL</label>
-                                <input value={scriptUrl} onChange={e=>setScriptUrl(e.target.value)} className="w-full bg-slate-900 rounded p-2 text-[10px] text-indigo-300 font-mono mb-4 outline-none border border-white/5" />
-                                <label className="text-[10px] font-bold text-slate-500 block mb-1">구글 시트 URL</label>
-                                <input value={sheetUrl} onChange={e=>setSheetUrl(e.target.value)} className="w-full bg-slate-900 rounded p-2 text-[10px] text-slate-400 font-mono mb-6 outline-none" />
-                                <button onClick={()=>setIsConfigOpen(false)} className="w-full bg-indigo-600 py-3 rounded-xl font-bold text-xs text-white">설정 저장 및 닫기</button>
-                            </div>
-                        )}
-
-                        {!labelModal && (
-                            <div className="px-6 flex gap-1 border-t border-slate-800 overflow-x-auto no-scrollbar">
-                                {Object.keys(tabData).map(key => (
-                                    <button key={key} onClick={() => setActiveTab(key)} className={`tab-button min-w-[100px] ${activeTab === key ? 'tab-active' : 'tab-inactive'}`}>
-                                        <span className="uppercase font-black">{tabData[key].title}</span>
-                                    </button>
+                <div className="flex flex-col h-screen overflow-hidden">
+                    <header className="no-print bg-[#0f172a] text-white flex justify-between items-center px-8 h-16 shrink-0 z-50">
+                        <div className="flex items-center gap-12 h-full">
+                            <span className="font-black text-2xl tracking-tighter uppercase italic">CELLINA <span className="text-indigo-400">시스템</span></span>
+                            <nav className="flex h-full">
+                                {Object.keys(tabData).map(k => (
+                                    <div key={k} onClick={() => setActiveTab(k)} className={`nav-link ${activeTab === k ? 'active' : ''}`}>{tabData[k].title}</div>
                                 ))}
-                            </div>
-                        )}
+                            </nav>
+                        </div>
                     </header>
 
-                    <main className="flex-1 overflow-auto bg-slate-300 p-8 flex flex-col items-center">
-                        {!labelModal ? (
-                            <div className={`a4-paper-container ${activeTab === 'carton' ? 'carton-view-mode' : ''}`} id="paper">
-                                <div className={`grid gap-x-10 gap-y-10 items-start ${current.printCols === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
-                                    {groupedBlocks.map((block) => (
-                                        <div key={block.id} className="group/box border-2 border-slate-900 bg-white break-inside-avoid rounded-lg overflow-hidden shadow-sm">
-                                            <div style={{ backgroundColor: block.theme }} className="flex justify-between items-center p-2 text-white print:hidden border-b-2 border-slate-900">
-                                                <EditableTitle initialValue={block.title} onSave={(v) => renameCategory(block.originalCat, v)} style={{ fontSize: `${current.titleFontSize}px` }} className="flex-1" />
-                                                <div className="flex gap-1 no-print items-center text-white pr-2">
-                                                    <button onClick={() => updateCurrentData({ items: [{ id: Date.now(), cat: block.originalCat, name: "", origin: "", vendor: "", checked: false }, ...current.items] })} className="bg-white/20 p-1.5 rounded hover:bg-white/40"><Icon name="plus" size={14}/></button>
-                                                    <div className="relative group">
-                                                        <input type="color" value={block.theme} onChange={e => setTabData(prev => ({...prev, [activeTab]: {...prev[activeTab], themes: {...prev[activeTab].themes, [block.originalCat]: e.target.value}}}))} className="w-6 h-6 p-0 bg-transparent border-0 cursor-pointer absolute inset-0 opacity-0 z-10" />
-                                                        <div className="w-6 h-6 rounded border border-white/30 flex items-center justify-center bg-white/10 group-hover:bg-white/20 transition-colors"><Icon name="palette" size={12} className="text-white" /></div>
+                    <main className="flex-1 overflow-auto p-10 bg-[#f4f7fa] custom-scroll">
+                        <div id="paper" className="max-w-[1440px] mx-auto">
+                            
+                            {activeTab === "formula_sheet" ? (
+                                current.order.map(cat => {
+                                    const meta = current.recipeMeta[cat];
+                                    const items = current.items.filter(i => i.cat === cat);
+                                    const totalW = items.reduce((a, b) => a + Number(b.weight || 0), 0);
+
+                                    return (
+                                        <div key={cat} className="card shadow-lg mb-16 animate-in fade-in duration-500">
+                                            <div className="recipe-header-card">
+                                                <div className="space-y-8">
+                                                    <div className="max-w-2xl">
+                                                        <span className="config-label text-slate-400">제품명</span>
+                                                        <input value={cat} onChange={e => {
+                                                            const newC = e.target.value;
+                                                            const nextMeta = {...current.recipeMeta, [newC]: current.recipeMeta[cat]}; delete nextMeta[cat];
+                                                            updateData({ order: current.order.map(o => o === cat ? newC : o), items: current.items.map(i => i.cat === cat ? {...i, cat: newC} : i), recipeMeta: nextMeta });
+                                                        }} className="text-4xl font-black text-slate-900 outline-none border-b-4 border-transparent focus:border-indigo-500 w-full bg-transparent" />
                                                     </div>
-                                                    <button onClick={() => confirm(`'${block.title}' 분류를 삭제할까요?`) && updateCurrentData({ items: current.items.filter(i => i.cat !== block.originalCat), order: current.order.filter(c => c !== block.originalCat) })} className="bg-white/20 p-1.5 rounded hover:bg-red-500/40"><Icon name="trash" size={14}/></button>
+                                                    <div className="flex items-center gap-12">
+                                                        <div className="w-72">
+                                                            <span className="config-label">식품유형</span>
+                                                            <select value={meta.foodType} onChange={e => updateData({ recipeMeta: {...current.recipeMeta, [cat]: {...meta, foodType: e.target.value}}})} className="input-base text-left px-4 font-black">
+                                                                {FOOD_TYPES.map(t => <option key={t}>{t}</option>)}
+                                                            </select>
+                                                        </div>
+                                                        <div className="w-56">
+                                                            <span className="config-label text-indigo-600">목표 배치 생산량 (g)</span>
+                                                            <input type="number" value={meta.productWeight} onChange={e => {
+                                                                const newT = Number(e.target.value);
+                                                                const ratio = newT / Number(meta.productWeight);
+                                                                const nextItems = current.items.map(i => i.cat === cat ? {...i, weight: (Number(i.weight)*ratio).toFixed(4), ratio: ((Number(i.weight)*ratio)/newT*100).toFixed(3)} : i);
+                                                                updateData({ items: nextItems, recipeMeta: {...current.recipeMeta, [cat]: {...meta, productWeight: newT}}});
+                                                            }} className="input-base text-indigo-600 font-black text-xl" />
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <div className="config-box space-y-6">
+                                                    <div className="flex items-center gap-3">
+                                                        <span className="text-sm font-black text-slate-800 tracking-wide">💡 희석 섭취량 시뮬레이션 설정</span>
+                                                    </div>
+                                                    <div className="flex gap-6">
+                                                        <div className="w-36">
+                                                            <span className="config-label">제품 투입량(g)</span>
+                                                            <input type="number" value={meta.productSample} onChange={e => updateData({recipeMeta: {...current.recipeMeta, [cat]: {...meta, productSample: e.target.value}}})} className="input-base text-slate-900 border-slate-300" />
+                                                        </div>
+                                                        <div className="flex items-end pb-3 text-slate-300 font-black text-2xl">+</div>
+                                                        <div className="w-36">
+                                                            <span className="config-label">물 투입량(g)</span>
+                                                            <input type="number" value={meta.waterSample} onChange={e => updateData({recipeMeta: {...current.recipeMeta, [cat]: {...meta, waterSample: e.target.value}}})} className="input-base text-slate-900 border-slate-300" />
+                                                        </div>
+                                                        <div className="pl-6 border-l-2 border-slate-200 ml-2 flex flex-col justify-end">
+                                                            <span className="config-label">최종 섭취 음료량</span>
+                                                            <span className="text-2xl font-black text-indigo-700">{(Number(meta.productSample) + Number(meta.waterSample))} g</span>
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             </div>
-                                            <div style={{ backgroundColor: block.theme, fontSize: `${current.titleFontSize}px`, textAlign: 'left', padding: '10px 15px' }} className="hidden print:block text-white font-black border-b-2 border-slate-900">{block.title}</div>
-                                            
-                                            <table className="w-full border-collapse" style={{ fontSize: `${current.fontSize}px` }}>
-                                                <thead className="bg-slate-50 border-b-2 border-slate-900 font-bold text-left">
+
+                                            <table className="formula-table">
+                                                <thead>
                                                     <tr>
-                                                        <th className="w-10 border-r border-slate-900 py-2 text-center">V</th>
-                                                        <th className="px-4 border-r border-slate-900">제품명</th>
-                                                        {activeTab !== 'carton' && <th className="w-24 px-4 border-r border-slate-900">원산지</th>}
-                                                        <th className="w-32 px-4">{activeTab === 'carton' ? '소비기한' : '공급처'}</th>
+                                                        <th className="w-16">번호</th>
+                                                        <th className="text-left">원료명 / 성분명 (충분한 너비)</th>
+                                                        <th className="w-40 bg-amber-50/50">배합중량(g)</th>
+                                                        <th className="w-40 bg-emerald-50/50">배합비(%)</th>
+                                                        <th className="w-80">식품공전 검증 상세</th>
+                                                        <th className="w-16 no-print"></th>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
-                                                    {block.items.length === 0 ? (
-                                                        <tr><td colSpan="4" className="py-6 text-center text-slate-300 italic">내용 없음</td></tr>
-                                                    ) : (
-                                                        block.items.map(item => (
-                                                            <tr key={item.id} className="border-b border-slate-200 group/row hover:bg-slate-50 transition-colors">
-                                                                <td className="border-r border-slate-200 v-middle text-center">
-                                                                    <input type="checkbox" checked={item.checked} onChange={() => editItem(item.id, 'checked', !item.checked)} className="mx-auto block" style={{width:'15px', height:'15px'}} />
+                                                    {items.map((item, idx) => {
+                                                        const v = getValidationDetail(item.name, item.weight, meta.productWeight, meta.foodType, meta.productSample, meta.waterSample);
+                                                        return (
+                                                            <tr key={item.id}>
+                                                                <td className="text-center font-bold text-slate-300">{idx+1}</td>
+                                                                <td>
+                                                                    <input 
+                                                                        value={item.name} 
+                                                                        onChange={e => handleFormulaItem(item.id, 'name', e.target.value, cat)} 
+                                                                        className="ghost-input text-left px-4 font-black text-slate-800 text-lg w-full" 
+                                                                        placeholder="원료명을 입력하세요" 
+                                                                    />
                                                                 </td>
-                                                                <td className="border-r border-slate-200 v-middle text-left">
-                                                                    <div className="flex items-center justify-between">
-                                                                        <textarea value={item.name} onChange={e => editItem(item.id, 'name', e.target.value)} className="cell-textarea font-black text-slate-800" rows={item.name.split('\n').length || 1} />
-                                                                        <div className="flex gap-1 no-print opacity-0 group-hover/row:opacity-100 transition-opacity p-1 shrink-0">
-                                                                            {activeTab === 'carton' && <button onClick={() => openLabelMaker(item)} className="text-indigo-500 hover:scale-110"><Icon name="printer" size={14}/></button>}
-                                                                            <button onClick={() => updateCurrentData({ items: current.items.filter(i => i.id !== item.id) })} className="text-red-400 hover:scale-110"><Icon name="trash" size={14}/></button>
-                                                                        </div>
+                                                                <td className="bg-amber-50/20">
+                                                                    <input type="number" step="0.0001" value={item.weight} onChange={e => handleFormulaItem(item.id, 'weight', e.target.value, cat)} className="ghost-input font-black text-amber-800 text-lg" />
+                                                                </td>
+                                                                <td className="bg-emerald-50/20">
+                                                                    <div className="flex items-center justify-center gap-1">
+                                                                        <input type="number" step="0.001" value={item.ratio} onChange={e => handleFormulaItem(item.id, 'ratio', e.target.value, cat)} className="ghost-input font-black text-emerald-800 text-lg w-28" />
+                                                                        <span className="text-emerald-400 font-black text-sm">%</span>
                                                                     </div>
                                                                 </td>
-                                                                {activeTab !== 'carton' && (
-                                                                    <td className="border-r border-slate-200 v-middle text-left">
-                                                                        <textarea value={item.origin} onChange={e => editItem(item.id, 'origin', e.target.value)} className="cell-textarea font-medium" rows={item.origin.split('\n').length || 1} />
-                                                                    </td>
-                                                                )}
-                                                                <td className="v-middle text-left">
-                                                                    <textarea value={item.vendor} onChange={e => editItem(item.id, 'vendor', e.target.value)} className="cell-textarea text-slate-500 font-medium" rows={item.vendor.split('\n').length || 1} />
+                                                                <td className="p-3 text-center">
+                                                                    {v.status !== 'none' ? (
+                                                                        <div className="flex flex-col items-center gap-1.5 w-full">
+                                                                            <div className="flex items-center gap-2">
+                                                                                <span className={`v-status ${v.status === 'fail' ? 'v-status-fail' : 'v-status-pass'}`}>
+                                                                                    {v.status === 'fail' ? '⚠️ 기준치 초과' : '✅ 적합'}
+                                                                                </span>
+                                                                                <span className="v-numbers">현재 {v.current} / 한도 {v.limit}</span>
+                                                                            </div>
+                                                                            {v.warning && (
+                                                                                <div className="text-[11px] text-amber-800 bg-amber-50 border border-amber-100 p-2 rounded w-full text-left font-bold leading-tight whitespace-pre-wrap">
+                                                                                    {v.warning}
+                                                                                </div>
+                                                                            )}
+                                                                        </div>
+                                                                    ) : <span className="text-slate-300">-</span>}
+                                                                </td>
+                                                                <td className="text-center no-print px-4">
+                                                                    <button onClick={() => updateData({items: current.items.filter(i=>i.id!==item.id)})} className="trash-btn">×</button>
                                                                 </td>
                                                             </tr>
-                                                        ))
-                                                    )}
+                                                        );
+                                                    })}
+                                                    {/* 합계 라인 디자인 개선 */}
+                                                    <tr className="total-row h-20">
+                                                        <td colSpan={2} className="total-label">배합 결과 요약</td>
+                                                        <td className="text-center total-value border-x border-white">{totalW.toFixed(2)} g</td>
+                                                        <td className="text-center total-value text-indigo-600 border-x border-white">{items.reduce((a, b) => a + Number(b.ratio || 0), 0).toFixed(3)} %</td>
+                                                        <td colSpan={2} className="text-center">
+                                                            <span className={`px-4 py-1.5 rounded-full font-black text-xs ${Math.abs(items.reduce((a,b)=>a+Number(b.ratio||0),0)-100) < 0.1 ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
+                                                                {Math.abs(items.reduce((a,b)=>a+Number(b.ratio||0),0)-100) < 0.1 ? '정상 배합 확인됨' : '배합비 비율 조정 필요'}
+                                                            </span>
+                                                        </td>
+                                                    </tr>
                                                 </tbody>
                                             </table>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        ) : (
-                            <div className="flex flex-col lg:flex-row gap-8 max-w-[1400px] w-full items-start animate-pop">
-                                <div className="flex-1 bg-white p-12 rounded-3xl shadow-2xl border border-slate-200 flex justify-center sticky top-0">
-                                    <div className="bg-white shadow-xl overflow-hidden flex flex-col border border-black/10" style={{ width: '280mm', height: '190mm', fontFamily: labelModal.fontFamily, zoom: '0.45' }}>
-                                        <div style={{ backgroundColor: labelModal.bgTop, color: labelModal.colorTop, height: labelModal.isSingleZone ? '100%' : '72%' }} className="flex flex-col justify-center items-center p-12 text-center transition-all">
-                                            <div style={{ fontSize: `${labelModal.mainSize}px`, fontWeight: '900', lineHeight: '1.1', whiteSpace: 'pre-wrap' }}>{labelModal.mainText}</div>
-                                        </div>
-                                        {!labelModal.isSingleZone && (
-                                            <div style={{ backgroundColor: labelModal.bgBottom, color: labelModal.colorBottom, height: '28%' }} className="flex justify-center items-center border-t-4 border-black/10">
-                                                <div style={{ fontSize: `${labelModal.footerSize}px`, fontWeight: '900' }}>{labelModal.footerText}</div>
+                                            <div className="p-8 bg-white no-print border-t border-slate-50 flex justify-between items-center">
+                                                <button onClick={() => updateData({items: [...current.items, {id: Date.now(), cat, name: "", weight: 0, ratio: 0}]})} className="btn-add">새 원료 항목 추가</button>
+                                                <div className="text-right">
+                                                    <p className="text-xs text-indigo-600 font-black mb-1">✅ 1번 항목 오토밸런싱 활성화 (타 원료 조절 시 1번 항목이 자동 증감되어 총량을 유지합니다)</p>
+                                                    <p className="text-xs text-slate-400 font-bold">※ 아스파탐, 에리스리톨 등 기재 시 법적 필수 주의문구가 자동 표시됩니다.</p>
+                                                </div>
                                             </div>
-                                        )}
+                                        </div>
+                                    );
+                                })
+                            ) : activeTab === "nutrition_worksheet" ? (
+                                <div className="grid grid-cols-1 xl:grid-cols-12 gap-10 items-start animate-in fade-in">
+                                    <div className="xl:col-span-9 card shadow-xl">
+                                        <div className="p-6 border-b border-slate-100 flex items-center gap-3">
+                                            <div className="w-2 h-6 bg-indigo-600 rounded-full"></div>
+                                            <h3 className="font-black text-slate-800 text-base uppercase">영양정보 설계 및 법적 가이드 워크시트</h3>
+                                        </div>
+                                        <table className="formula-table">
+                                            <thead>
+                                                <tr>
+                                                    <th className="w-24">항목</th>
+                                                    <th className="w-44">실험값 / 실측치</th>
+                                                    <th className="w-72">표시결정</th>
+                                                    <th>가이드 및 강조 기준</th>
+                                                    <th className="w-24">결과</th>
+                                                    <th className="w-24">% DV</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {current.items.map((item) => {
+                                                    const res = calculateNutri(item);
+                                                    const per = item.dv > 0 ? Math.round((parseFloat(res) / item.dv) * 100) : 0;
+                                                    return (
+                                                        <tr key={item.id}>
+                                                            <td className="text-center font-black text-slate-700">{item.name}<div className="text-[11px] text-slate-400 font-bold">{item.unit}</div></td>
+                                                            <td><input type="number" step="0.001" value={item.value} onChange={e => updateData({items: current.items.map(it => it.id === item.id ? {...it, value: e.target.value} : it)})} className="input-base" /></td>
+                                                            <td>
+                                                                <div className="flex flex-col gap-2 px-4">
+                                                                    {item.options.map((opt, oIdx) => (
+                                                                        <label key={oIdx} className="flex items-center gap-2 text-[12px] font-bold text-slate-500 cursor-pointer hover:text-indigo-600 transition-all">
+                                                                            <input type="radio" checked={item.selected === oIdx} onChange={() => updateData({items: current.items.map(it => it.id === item.id ? {...it, selected: oIdx} : it)})} className="w-4 h-4 accent-indigo-600" /> {opt}
+                                                                        </label>
+                                                                    ))}
+                                                                </div>
+                                                            </td>
+                                                            <td className="text-[12px] text-slate-500 font-medium px-8 leading-relaxed whitespace-pre-wrap">{item.guide}</td>
+                                                            <td className="text-center font-black text-slate-900 text-xl">{res}</td>
+                                                            <td className="text-center font-black text-indigo-600 text-xl">{per > 0 ? per + '%' : '0%'}</td>
+                                                        </tr>
+                                                    );
+                                                })}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    <div className="xl:col-span-3">
+                                        <div className="sticky top-10 flex flex-col items-center">
+                                            <p className="text-xs font-black text-slate-400 mb-4 uppercase tracking-widest text-center">실시간 라벨 미리보기</p>
+                                            <div className="nutrition-label card p-6 border-2 border-black shadow-2xl w-[320px] bg-white text-black">
+                                                <div className="text-3xl font-black border-b-[10px] border-black pb-1 mb-2">영양정보</div>
+                                                <div className="flex justify-between items-end border-b-2 border-black pb-1 mb-1">
+                                                    <span className="font-black text-xs">총 내용량 100g</span>
+                                                    <span className="font-black text-2xl tracking-tighter">
+                                                        {current.items.find(i=>i.key==='cal') ? calculateNutri(current.items.find(i=>i.key==='cal')) : 0} kcal
+                                                    </span>
+                                                </div>
+                                                <div className="flex justify-end text-[10px] font-black py-1 border-b border-black">1일 영양성분 기준치에 대한 비율</div>
+                                                {current.items.filter(i=>i.key!=='cal').map(i => {
+                                                    const res = calculateNutri(i);
+                                                    const per = i.dv > 0 ? Math.round((parseFloat(res) / i.dv) * 100) : 0;
+                                                    return (
+                                                        <div key={i.id} className={`flex justify-between py-1.5 border-b border-black font-bold text-[15px] ${['sug', 'sfat', 'tfat'].includes(i.key) ? 'pl-5 text-[14px]' : ''}`}>
+                                                            <span>{i.name} <span className="font-medium ml-1">{res}{i.unit}</span></span>
+                                                            <span>{per > 0 ? per+'%' : (i.key === 'tfat' ? '-' : '0%')}</span>
+                                                        </div>
+                                                    );
+                                                })}
+                                                <div className="text-[10px] mt-4 font-medium leading-tight">1일 영양성분 기준치에 대한 비율(%)은 2,000kcal 기준이므로...</div>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
-
-                                <div className="w-[420px] space-y-4 no-print editor-sidebar p-2">
-                                    <div className="bg-white p-6 rounded-3xl shadow-lg border border-slate-200">
-                                        <div className="flex justify-between items-center mb-6 text-slate-400">
-                                            <h3 className="font-black text-xs uppercase tracking-tighter">라벨 스타일 에디터</h3>
-                                        </div>
-                                        <div className="flex bg-slate-100 p-1 rounded-2xl mb-6">
-                                            <button onClick={() => setLabelModal({...labelModal, isSingleZone: false})} className={`flex-1 py-3 text-[10px] font-black rounded-xl transition-all ${!labelModal.isSingleZone ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400'}`}>표준 (2단)</button>
-                                            <button onClick={() => setLabelModal({...labelModal, isSingleZone: true})} className={`flex-1 py-3 text-[10px] font-black rounded-xl transition-all ${labelModal.isSingleZone ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400'}`}>단일 (1단)</button>
-                                        </div>
-                                        <div className="space-y-6">
-                                            <div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">메인 제품명</label><textarea value={labelModal.mainText} onChange={e => setLabelModal({...labelModal, mainText: e.target.value})} className="w-full border-2 border-slate-100 p-4 rounded-2xl h-32 font-bold text-sm bg-slate-50 focus:border-indigo-500 outline-none transition-all" /></div>
-                                            {!labelModal.isSingleZone && (<div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">하단 추가 정보</label><input value={labelModal.footerText} onChange={e => setLabelModal({...labelModal, footerText: e.target.value})} className="w-full border-2 border-slate-100 p-4 rounded-2xl font-bold text-sm bg-slate-50 focus:border-indigo-500 outline-none transition-all" /></div>)}
-                                            <ComplexColorPicker label="배경 색상" colorKey="bgTop" currentColor={labelModal.bgTop} onColorSelect={(k,v) => setLabelModal({...labelModal, [k]:v})} />
-                                            <ComplexColorPicker label="글자 색상" colorKey="colorTop" currentColor={labelModal.colorTop} onColorSelect={(k,v) => setLabelModal({...labelModal, [k]:v})} />
-                                            <div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase flex justify-between tracking-widest">글자 크기 <span className="text-indigo-600 font-mono">{labelModal.mainSize}px</span></label><input type="range" min="40" max="600" value={labelModal.mainSize} onChange={e => setLabelModal({...labelModal, mainSize: parseInt(e.target.value)})} className="w-full h-2 accent-indigo-600 bg-slate-100 rounded-lg appearance-none cursor-pointer" /></div>
-                                            <button onClick={saveLabelSettings} className="w-full bg-blue-600 text-white py-4 rounded-2xl font-black shadow-xl hover:bg-blue-700 transition-all transform active:scale-95">에디터 로컬 저장</button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
+                            ) : (
+                                <div className="text-center py-40 text-slate-300 font-black uppercase tracking-widest italic">해당 모듈 준비 중입니다.</div>
+                            )}
+                        </div>
                     </main>
                 </div>
             );
         };
-
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<App />);
+        const root = ReactDOM.createRoot(document.getElementById('root')); root.render(<App />);
     </script>
 </body>
 </html>
