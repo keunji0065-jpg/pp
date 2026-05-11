@@ -1,508 +1,195 @@
-<!DOCTYPE html>
-<html lang="ko">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cellina Cloud ERP | 전문 배합 관리 시스템</title>
-    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
-    <style>
-        :root {
-            --indigo: #4f46e5;
-            --slate-50: #f8fafc;
-            --slate-100: #f1f5f9;
-            --slate-200: #e2e8f0;
-            --slate-400: #94a3b8;
-            --slate-600: #475569;
-            --slate-800: #1e293b;
-        }
-        body { 
-            font-family: "Pretendard Variable", Pretendard, sans-serif;
-            background-color: #f1f5f9; 
-            margin: 0; padding: 0; color: var(--slate-800);
-            letter-spacing: -0.025em;
-            -webkit-font-smoothing: antialiased;
-            font-size: 15px; /* 전체 글씨체 확대 */
-        }
-        @media print {
-            .no-print { display: none !important; }
-            body { background: white !important; }
-            #paper { width: 100% !important; margin: 0 !important; padding: 0 !important; }
-            .card { box-shadow: none !important; border: 1px solid var(--slate-200) !important; }
-        }
+import React, { useState, useEffect } from 'react';
+import { Search, ShoppingBag, Home, User, Menu, Copy } from 'lucide-react';
 
-        /* 네비게이션 */
-        .nav-link { 
-            padding: 0 32px; height: 100%; display: flex; align-items: center; 
-            font-weight: 700; font-size: 15px; color: #94a3b8; 
-            transition: all 0.2s; cursor: pointer; position: relative;
-        }
-        .nav-link:hover { color: #f1f5f9; background: rgba(255,255,255,0.05); }
-        .nav-link.active { color: white; }
-        .nav-link.active::after {
-            content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 4px;
-            background: var(--indigo); border-radius: 4px 4px 0 0;
-        }
+export default function App() {
+  const [allProducts, setAllProducts] = useState([]);
+  const [products, setProducts] = useState([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [toastMessage, setToastMessage] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
 
-        /* 카드 레이아웃 */
-        .card { background: white; border-radius: 16px; border: 1px solid var(--slate-200); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); overflow: hidden; }
+  // 구글 시트 데이터 불러오기
+  useEffect(() => {
+    const fetchSheetData = async () => {
+      try {
+        // 사장님이 주신 구글 시트 CSV 링크 적용!
+        const csvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT5i3ao2qfH8pe0kMYBxAzmzftmbi2QnxlkzUDm-caT-EG4UOYIE84iA5TwJGH9Sd-_TRLlT5f84GE6/pub?gid=1287250952&single=true&output=csv";
+        const response = await fetch(csvUrl);
+        const text = await response.text();
         
-        /* 배합시트 전용 테이블 - 원료명 강조형 */
-        .formula-table { width: 100%; border-collapse: separate; border-spacing: 0; }
-        .formula-table th { 
-            background: #f8fafc; color: var(--slate-600); font-weight: 700; 
-            font-size: 13px; padding: 16px; border-bottom: 1px solid var(--slate-200); text-align: center;
-        }
-        .formula-table td { padding: 12px 14px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
-        .formula-table tr:hover td { background-color: #fcfdfe; }
+        // CSV 파싱 로직 (가격에 쉼표가 있을 수 있으므로 따옴표 처리)
+        const rows = text.split('\n');
+        const data = [];
         
-        .input-base { 
-            width: 100%; border: 1.5px solid var(--slate-200); background: white; 
-            text-align: right; font-size: 15px; font-weight: 700; 
-            padding: 10px 14px; border-radius: 8px; transition: all 0.2s; outline: none;
-        }
-        .input-base:focus { border-color: var(--indigo); box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1); }
-        
-        .ghost-input {
-            width: 100%; border: none; background: transparent; text-align: center;
-            font-size: 15px; font-weight: 700; outline: none; padding: 10px 4px; border-radius: 6px;
-        }
-        .ghost-input:focus { background: white; box-shadow: inset 0 0 0 1.5px var(--indigo); }
-
-        /* 검증 표시 스타일 */
-        .v-info { display: flex; flex-direction: column; align-items: center; gap: 1px; }
-        .v-status { font-size: 12px; font-weight: 800; border-radius: 4px; }
-        .v-status-pass { color: #15803d; }
-        .v-status-fail { color: #b91c1c; font-weight: 900; }
-        .v-numbers { font-size: 11px; color: #64748b; font-weight: 500; }
-
-        .recipe-header-card { 
-            background: #fff; border-bottom: 1px solid var(--slate-100); 
-            padding: 32px; display: grid; grid-template-columns: 1fr auto; gap: 40px; align-items: end;
-        }
-
-        .config-box { background: #f8fafc; border-radius: 12px; padding: 20px; border: 1px solid var(--slate-200); }
-        .config-label { font-size: 12px; font-weight: 800; color: var(--slate-400); margin-bottom: 8px; display: block; }
-
-        .btn-add {
-            background: var(--indigo); color: white; padding: 12px 28px; border-radius: 10px;
-            font-weight: 700; font-size: 14px; transition: all 0.2s; cursor: pointer;
-        }
-        .btn-add:hover { transform: translateY(-1px); background: #4338ca; }
-
-        .trash-btn { color: #cbd5e1; transition: all 0.2s; cursor: pointer; font-size: 20px; }
-        .formula-table tr:hover .trash-btn { color: #f43f5e; }
-
-        .total-row { background-color: #f1f5f9 !important; }
-        .total-label { color: #475569; font-weight: 800; text-align: right; padding-right: 24px; font-size: 13px; }
-        .total-value { color: var(--slate-800); font-weight: 900; font-size: 17px; }
-
-        .custom-scroll::-webkit-scrollbar { width: 6px; height: 6px; }
-        .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
-    </style>
-</head>
-<body>
-    <div id="root"></div>
-
-    <script type="text/babel">
-        const { useState, useEffect, useMemo } = React;
-
-        const FOOD_TYPES = ["혼합음료", "음료베이스(분말)", "음료베이스(액상)", "기타가공품", "체중조절용조제식품"];
-        
-        const FOOD_CODE_DB = {
-            "수크랄로스": { 
-                limits: { "혼합음료": 0.4, "음료베이스(분말)": 0.4, "음료베이스(액상)": 0.4, "기타가공품": 0.5, "체중조절용조제식품": 1.25 },
-                warning: "명칭 및 용도 함께 표시 (예: 수크랄로스(감미료))"
-            },
-            "아스파탐": { 
-                limits: { "혼합음료": 0.6, "음료베이스(분말)": 0.6, "음료베이스(액상)": 0.6, "기타가공품": 0.6, "체중조절용조제식품": 1.0 },
-                warning: "⚠️ '페닐알라닌 함유' 주의문구 표시 필수\n※ 명칭 및 용도 함께 표시 (예: 아스파탐(감미료))"
-            },
-            "아세설팜칼륨": { 
-                limits: { "혼합음료": 0.35, "음료베이스(분말)": 0.35, "음료베이스(액상)": 0.35, "기타가공품": 0.35, "체중조절용조제식품": 0.45 },
-                warning: "명칭 및 용도 함께 표시 (예: 아세설팜칼륨(감미료))"
-            },
-            "사카린나트륨": { 
-                limits: { "혼합음료": 0.2, "음료베이스(분말)": 1.2, "음료베이스(액상)": 0.2, "기타가공품": 0.0, "체중조절용조제식품": 1.2 },
-                warning: "명칭 및 용도 함께 표시 (예: 사카린나트륨(감미료))"
-            },
-            "스테비올배당체": { 
-                limits: { "혼합음료": 0.2, "음료베이스(분말)": 0.6, "음료베이스(액상)": 0.2, "기타가공품": 0.2, "체중조절용조제식품": 0.2 },
-                warning: "명칭 및 용도 함께 표시 (예: 스테비올배당체(감미료))"
-            },
-            "효소처리스테비아": { 
-                limits: { "혼합음료": 999, "음료베이스(분말)": 999, "음료베이스(액상)": 999, "기타가공품": 999, "체중조절용조제식품": 999 },
-                warning: "명칭 및 용도 함께 표시 (예: 효소처리스테비아(감미료))"
-            },
-            "에리스리톨": { 
-                limits: { "혼합음료": 999, "음료베이스(분말)": 999, "음료베이스(액상)": 999, "기타가공품": 999, "체중조절용조제식품": 999 },
-                warning: "⚠️ 당알코올류: '과량 섭취 시 설사를 일으킬 수 있습니다' 주의문구 표시 권장"
-            },
-            "알룰로스": { 
-                limits: { "혼합음료": 999, "음료베이스(분말)": 999, "음료베이스(액상)": 999, "기타가공품": 999, "체중조절용조제식품": 999 },
-                warning: "⚠️ 당알코올류: '과량 섭취 시 설사를 일으킬 수 있습니다' 주의문구 표시 권장"
+        rows.forEach((row, index) => {
+          // 줄바꿈 등 불필요한 공백 제거
+          const cleanRow = row.replace(/\r/g, '').trim();
+          if (!cleanRow) return;
+          
+          const cols = [];
+          let current = '';
+          let inQuotes = false;
+          
+          for (let i = 0; i < cleanRow.length; i++) {
+            if (cleanRow[i] === '"') {
+              inQuotes = !inQuotes; // 따옴표 안쪽인지 상태만 변경
+            } else if (cleanRow[i] === ',' && !inQuotes) {
+              cols.push(current.trim());
+              current = '';
+            } else {
+              current += cleanRow[i];
             }
-        };
-
-        const INITIAL_DATA = {
-            formula_sheet: { 
-                title: "배합시트", 
-                headers: ['번호', '원료명 및 성분명', '배합중량(g)', '배합비(%)', '식품공전 검증 현황'], 
-                items: [
-                    { id: 100, cat: "핵심 레시피", name: "정제수 (베이스)", weight: 998, ratio: 99.8 },
-                    { id: 101, cat: "핵심 레시피", name: "수크랄로스", weight: 2, ratio: 0.2 }
-                ], 
-                order: ["핵심 레시피"], 
-                recipeMeta: { "핵심 레시피": { foodType: "음료베이스(액상)", productWeight: 1000, productSample: 10, waterSample: 200 } } 
-            },
-            nutrition_worksheet: {
-                title: "영양정보",
-                items: [
-                    { id: 'n1', name: '열량', key: 'cal', unit: 'kcal', value: 0, options: ['그대로 선택', '5kcal단위 표시', '5kcal미만 "0"표시'], selected: 2, guide: '법규: 5kcal 단위 표시 (5미만 "0")\n① 저: 100g당 40kcal 미만 / 무: 100ml당 4kcal 미만', dv: 2000 },
-                    { id: 'n2', name: '나트륨', key: 'na', unit: 'mg', value: 0, options: ['그대로 선택', '5/10mg단위 표시', '5mg미만 "0"표시'], selected: 2, guide: '법규: 120mg 이하 5단위, 초과 10단위\n① 저: 120mg 미만 / 무: 5mg 미만', dv: 2000 },
-                    { id: 'n3', name: '탄수화물', key: 'carb', unit: 'g', value: 0, options: ['그대로 선택', '1g단위 표시', '0.5g미만 "0"표시'], selected: 2, guide: '법규: 1g 단위 표시 (0.5미만 "0")', dv: 324 },
-                    { id: 'n4', name: '당류', key: 'sug', unit: 'g', value: 0, options: ['그대로 선택', '1g단위 표시', '0.5g미만 "0"표시'], selected: 2, guide: '법규: 1g 단위 표시 (0.5미만 "0")\n① 저: 100g당 5g 미만 / 무: 100g당 0.5g 미만', dv: 100 },
-                    { id: 'n5', name: '단백질', key: 'pro', unit: 'g', value: 0, options: ['그대로 선택', '1g단위 표시', '0.5g미만 "0"표시'], selected: 1, guide: '법규: 1g 단위 표시 (0.5미만 "0")\n① 함유: 기준치 10% 이상 / 고: 기준치 20% 이상', dv: 55 },
-                    { id: 'n6', name: '지방', key: 'fat', unit: 'g', value: 0, options: ['그대로 선택', '0.1g/1g단위', '0.5g미만 "0"표시'], selected: 2, guide: '법규: 5g이하 0.1g 단위 (0.5미만 "0")\n① 저: 100g당 3g 미만 / 무: 100g당 0.5g 미만', dv: 54 },
-                    { id: 'n7', name: '포화지방', key: 'sfat', unit: 'g', value: 0, options: ['그대로 선택', '0.1g/1g단위', '0.5g미만 "0"표시'], selected: 2, guide: '법규: 5g이하 0.1g 단위 (0.5미만 "0")', dv: 15 },
-                    { id: 'n8', name: '트랜스지방', key: 'tfat', unit: 'g', value: 0, options: ['그대로 선택', '0.5g미만 "0"표시', '0.2g미만 표기'], selected: 1, guide: '법규: 0.5g 미만 "0" 표시 (0.2g 미만 "0.2g미만" 가능)', dv: 0 },
-                    { id: 'n9', name: '콜레스테롤', key: 'chol', unit: 'mg', value: 0, options: ['그대로 선택', '5mg단위 표시', '2mg미만 "0"표시'], selected: 2, guide: '법규: 5mg 단위 표시 (2미만 "0")\n① 저: 100g당 20mg 미만 / 무: 100g당 5mg 미만', dv: 300 }
-                ]
-            },
-            test_report: { title: "시험성적서", headers: ['의뢰일자', '제품명', '식품유형', '판정'], keys: ['date', 'name', 'type', 'status'], items: [], order: ["히스토리"] },
-            sample_list: { title: "샘플목록", headers: ['품목명', '원산지', '공급사'], keys: ['name', 'origin', 'vendor'], items: [], order: ["보관 샘플"] }
-        };
-
-        const App = () => {
-            const [tabData, setTabData] = useState(() => {
-                const saved = localStorage.getItem('cellina_erp_v170_clean');
-                return saved ? JSON.parse(saved) : INITIAL_DATA;
+          }
+          cols.push(current.trim());
+          
+          // A열(상품명)이 비어있지 않은 데이터만 리스트에 추가
+          if (cols[0]) {
+            data.push({
+              id: index,
+              name: cols[0],
+              price: cols[1] || '' 
             });
-            const [activeTab, setActiveTab] = useState("formula_sheet");
+          }
+        });
+        
+        setAllProducts(data);
+        setProducts(data);
+        setIsLoading(false);
+      } catch (error) {
+        console.error("데이터를 불러오는데 실패했습니다.", error);
+        setIsLoading(false);
+      }
+    };
 
-            useEffect(() => { localStorage.setItem('cellina_erp_v170_clean', JSON.stringify(tabData)); }, [tabData]);
+    fetchSheetData();
+  }, []);
 
-            const current = tabData[activeTab] || INITIAL_DATA[activeTab];
-            const updateData = (updates) => { setTabData(prev => ({ ...prev, [activeTab]: { ...prev[activeTab], ...updates } })); };
+  // 검색 필터링 로직
+  useEffect(() => {
+    let filtered = allProducts;
+    
+    if (searchTerm) {
+      filtered = filtered.filter(p => 
+        p.name.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+    
+    setProducts(filtered);
+  }, [searchTerm, allProducts]);
 
-            // 영양정보 계산 로직 공통화
-            const calculateNutri = (it) => {
-                const val = Number(it.value) || 0;
-                const opt = it.options[it.selected];
-                if (opt.includes('0표시')) {
-                    if (it.key === 'cal' && val < 5) return "0";
-                    if (it.key === 'na' && val < 5) return "0";
-                    if (it.key === 'chol' && val < 2) return "0";
-                    if (['carb', 'sug', 'pro', 'fat', 'sfat', 'tfat'].includes(it.key) && val < 0.5) return "0";
-                }
-                if (opt.includes('5kcal')) return Math.round(val / 5) * 5;
-                if (opt.includes('5/10mg')) return val <= 120 ? Math.round(val / 5) * 5 : Math.round(val / 10) * 10;
-                if (opt.includes('1g단위')) return Math.round(val);
-                if (opt.includes('0.1g/1g단위')) return val <= 5 ? val.toFixed(1) : Math.round(val);
-                if (opt.includes('5mg단위')) return Math.round(val / 5) * 5;
-                if (opt.includes('0.2g미만')) return val < 0.2 ? "0.2 미만" : val.toFixed(1);
-                return val % 1 === 0 ? val.toString() : val.toFixed(1);
-            };
+  // 상품 정보 복사 함수
+  const handleCopy = (product) => {
+    // 금액에서 특수문자(₩) 및 불필요한 공백을 자동으로 제거
+    const cleanPrice = product.price.replace(/[^0-9,]/g, '');
+    const textToCopy = `${product.name} ${cleanPrice}`;
+    
+    // iframe 환경에서도 안전하게 복사하기 위한 로직
+    const textArea = document.createElement("textarea");
+    textArea.value = textToCopy;
+    document.body.appendChild(textArea);
+    textArea.select();
+    try {
+      document.execCommand('copy');
+      setToastMessage(`'${product.name}' 복사 완료!`);
+      setTimeout(() => {
+        setToastMessage("");
+      }, 2000);
+    } catch (err) {
+      console.error('복사 실패', err);
+    }
+    document.body.removeChild(textArea);
+  };
 
-            const getValidationDetail = (name, weight, total, type, ps, ws) => {
-                const entry = FOOD_CODE_DB[name];
-                if (!entry || !type) return { status: 'none' };
-                const limit = entry.limits[type] ?? 999;
-                const ratio = Number(weight) / Number(total);
-                const finalWeight = Number(ps) + Number(ws);
-                const conc = (Number(ps) * ratio) / (finalWeight / 1000);
-                const isFail = limit < 999 && conc > limit;
-                
-                return { 
-                    status: isFail ? 'fail' : 'pass', 
-                    current: conc.toFixed(3), 
-                    limit: limit === 999 ? '제한없음' : limit.toFixed(3),
-                    warning: entry.warning
-                };
-            };
+  return (
+    <div className="flex justify-center bg-gray-200 min-h-screen">
+      {/* 모바일 화면 사이즈로 고정 (max-w-md) */}
+      <div className="w-full max-w-md bg-white min-h-screen relative flex flex-col shadow-2xl overflow-hidden font-sans text-gray-800">
+        
+        {/* 앱 스타일 상단 헤더 */}
+        <header className="bg-white px-4 py-3 sticky top-0 z-10 flex justify-between items-center border-b border-gray-100">
+          <div className="flex items-center gap-2 text-lg font-bold text-gray-900">
+            <ShoppingBag className="text-black" size={20} />
+            <span>엠버언니 방송상품</span>
+          </div>
+          <button className="text-gray-500 hover:text-gray-900">
+            <Menu size={24} />
+          </button>
+        </header>
 
-            const handleFormulaItem = (id, key, val, cat) => {
-                const meta = current.recipeMeta[cat];
-                const total = Number(meta.productWeight);
-                
-                let nextItems = [...current.items];
-                const targetIndex = nextItems.findIndex(i => i.id === id);
-                if (targetIndex === -1) return;
+        <main className="flex-1 overflow-y-auto pb-6 bg-gray-50">
+          {/* 검색바 */}
+          <div className="px-4 py-4 bg-white shadow-sm mb-2">
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <Search className="h-4 w-4 text-gray-400" />
+              </div>
+              <input
+                type="text"
+                placeholder="상품명 또는 번호 검색..."
+                className="block w-full pl-9 pr-3 py-3 bg-gray-100 border-transparent rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-black focus:border-transparent transition-all outline-none"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+          </div>
 
-                // 1. 선택한 원료의 값 업데이트 (중량 <-> 비율 동기화)
-                let upd = { ...nextItems[targetIndex], [key]: val };
-                if (key === 'weight') {
-                    upd.ratio = total > 0 ? ((Number(val) / total) * 100).toFixed(3) : 0;
-                } else if (key === 'ratio') {
-                    upd.weight = total > 0 ? (total * (Number(val) / 100)).toFixed(4) : 0;
-                }
-                nextItems[targetIndex] = upd;
+          {/* 깔끔한 텍스트 리스트 뷰 */}
+          <div className="bg-white">
+            {isLoading ? (
+              <div className="text-center py-20 text-gray-500 text-sm">
+                상품 정보를 불러오는 중입니다...
+              </div>
+            ) : products.length > 0 ? (
+              <ul className="divide-y divide-gray-100">
+                {products.map((product, index) => {
+                  // 화면에 표시할 때도 특수문자 제거
+                  const cleanPrice = product.price.replace(/[^0-9,]/g, '');
 
-                // 2. 오토 밸런싱: 1번 항목(베이스) 자동 증감 로직
-                // 조건: 변경한 항목이 첫 번째 항목(베이스)이 아니고, 값이 중량이나 비율일 때
-                const catItems = nextItems.filter(i => i.cat === cat);
-                if (catItems.length > 1 && catItems[0].id !== id && (key === 'weight' || key === 'ratio')) {
-                    const firstItemId = catItems[0].id;
-                    
-                    // 1번 항목을 제외한 나머지 원료의 배합중량 총합 계산
-                    const sumOthers = catItems.reduce((acc, curr) => {
-                        return curr.id !== firstItemId ? acc + Number(curr.weight || 0) : acc;
-                    }, 0);
-
-                    // 목표 생산량에서 나머지 총합을 뺀 값을 1번 항목에 할당 (+/- 보정)
-                    const newFirstWeight = total - sumOthers;
-                    
-                    const firstItemIndex = nextItems.findIndex(i => i.id === firstItemId);
-                    if (firstItemIndex !== -1) {
-                        nextItems[firstItemIndex] = {
-                            ...nextItems[firstItemIndex],
-                            weight: newFirstWeight.toFixed(4),
-                            ratio: total > 0 ? ((newFirstWeight / total) * 100).toFixed(3) : 0
-                        };
-                    }
-                }
-
-                updateData({ items: nextItems });
-            };
-
-            return (
-                <div className="flex flex-col h-screen overflow-hidden">
-                    <header className="no-print bg-[#0f172a] text-white flex justify-between items-center px-8 h-16 shrink-0 z-50">
-                        <div className="flex items-center gap-12 h-full">
-                            <span className="font-black text-2xl tracking-tighter uppercase italic">CELLINA <span className="text-indigo-400">시스템</span></span>
-                            <nav className="flex h-full">
-                                {Object.keys(tabData).map(k => (
-                                    <div key={k} onClick={() => setActiveTab(k)} className={`nav-link ${activeTab === k ? 'active' : ''}`}>{tabData[k].title}</div>
-                                ))}
-                            </nav>
+                  return (
+                    <li 
+                      key={product.id} 
+                      // 줄마다 배경색을 교차로 다르게 주어(지브라 패턴) 가독성 향상
+                      className={`flex items-center justify-between py-4 px-4 hover:bg-gray-200 transition-colors group ${
+                        index % 2 === 0 ? 'bg-white' : 'bg-gray-50'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <span className="text-[15px] font-medium text-gray-800 leading-snug break-keep">
+                          {product.name}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-3 shrink-0">
+                        <div className="text-base font-bold text-gray-900">
+                          {cleanPrice}
                         </div>
-                    </header>
+                        <button 
+                          onClick={() => handleCopy(product)}
+                          className="p-1.5 px-2.5 text-gray-600 hover:text-blue-600 bg-white border border-gray-300 hover:bg-blue-50 hover:border-blue-300 rounded-lg transition-colors flex items-center gap-1.5 shadow-sm"
+                        >
+                          <Copy size={14} />
+                          <span className="text-[11px] font-bold">복사</span>
+                        </button>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            ) : (
+              <div className="text-center py-20 text-gray-500 text-sm">
+                검색 결과가 없습니다.
+              </div>
+            )}
+          </div>
+        </main>
 
-                    <main className="flex-1 overflow-auto p-10 bg-[#f4f7fa] custom-scroll">
-                        <div id="paper" className="max-w-[1440px] mx-auto">
-                            
-                            {activeTab === "formula_sheet" ? (
-                                current.order.map(cat => {
-                                    const meta = current.recipeMeta[cat];
-                                    const items = current.items.filter(i => i.cat === cat);
-                                    const totalW = items.reduce((a, b) => a + Number(b.weight || 0), 0);
-
-                                    return (
-                                        <div key={cat} className="card shadow-lg mb-16 animate-in fade-in duration-500">
-                                            <div className="recipe-header-card">
-                                                <div className="space-y-8">
-                                                    <div className="max-w-2xl">
-                                                        <span className="config-label text-slate-400">제품명</span>
-                                                        <input value={cat} onChange={e => {
-                                                            const newC = e.target.value;
-                                                            const nextMeta = {...current.recipeMeta, [newC]: current.recipeMeta[cat]}; delete nextMeta[cat];
-                                                            updateData({ order: current.order.map(o => o === cat ? newC : o), items: current.items.map(i => i.cat === cat ? {...i, cat: newC} : i), recipeMeta: nextMeta });
-                                                        }} className="text-4xl font-black text-slate-900 outline-none border-b-4 border-transparent focus:border-indigo-500 w-full bg-transparent" />
-                                                    </div>
-                                                    <div className="flex items-center gap-12">
-                                                        <div className="w-72">
-                                                            <span className="config-label">식품유형</span>
-                                                            <select value={meta.foodType} onChange={e => updateData({ recipeMeta: {...current.recipeMeta, [cat]: {...meta, foodType: e.target.value}}})} className="input-base text-left px-4 font-black">
-                                                                {FOOD_TYPES.map(t => <option key={t}>{t}</option>)}
-                                                            </select>
-                                                        </div>
-                                                        <div className="w-56">
-                                                            <span className="config-label text-indigo-600">목표 배치 생산량 (g)</span>
-                                                            <input type="number" value={meta.productWeight} onChange={e => {
-                                                                const newT = Number(e.target.value);
-                                                                const ratio = newT / Number(meta.productWeight);
-                                                                const nextItems = current.items.map(i => i.cat === cat ? {...i, weight: (Number(i.weight)*ratio).toFixed(4), ratio: ((Number(i.weight)*ratio)/newT*100).toFixed(3)} : i);
-                                                                updateData({ items: nextItems, recipeMeta: {...current.recipeMeta, [cat]: {...meta, productWeight: newT}}});
-                                                            }} className="input-base text-indigo-600 font-black text-xl" />
-                                                        </div>
-                                                    </div>
-                                                </div>
-
-                                                <div className="config-box space-y-6">
-                                                    <div className="flex items-center gap-3">
-                                                        <span className="text-sm font-black text-slate-800 tracking-wide">💡 희석 섭취량 시뮬레이션 설정</span>
-                                                    </div>
-                                                    <div className="flex gap-6">
-                                                        <div className="w-36">
-                                                            <span className="config-label">제품 투입량(g)</span>
-                                                            <input type="number" value={meta.productSample} onChange={e => updateData({recipeMeta: {...current.recipeMeta, [cat]: {...meta, productSample: e.target.value}}})} className="input-base text-slate-900 border-slate-300" />
-                                                        </div>
-                                                        <div className="flex items-end pb-3 text-slate-300 font-black text-2xl">+</div>
-                                                        <div className="w-36">
-                                                            <span className="config-label">물 투입량(g)</span>
-                                                            <input type="number" value={meta.waterSample} onChange={e => updateData({recipeMeta: {...current.recipeMeta, [cat]: {...meta, waterSample: e.target.value}}})} className="input-base text-slate-900 border-slate-300" />
-                                                        </div>
-                                                        <div className="pl-6 border-l-2 border-slate-200 ml-2 flex flex-col justify-end">
-                                                            <span className="config-label">최종 섭취 음료량</span>
-                                                            <span className="text-2xl font-black text-indigo-700">{(Number(meta.productSample) + Number(meta.waterSample))} g</span>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            <table className="formula-table">
-                                                <thead>
-                                                    <tr>
-                                                        <th className="w-16">번호</th>
-                                                        <th className="text-left">원료명 / 성분명 (충분한 너비)</th>
-                                                        <th className="w-40 bg-amber-50/50">배합중량(g)</th>
-                                                        <th className="w-40 bg-emerald-50/50">배합비(%)</th>
-                                                        <th className="w-80">식품공전 검증 상세</th>
-                                                        <th className="w-16 no-print"></th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    {items.map((item, idx) => {
-                                                        const v = getValidationDetail(item.name, item.weight, meta.productWeight, meta.foodType, meta.productSample, meta.waterSample);
-                                                        return (
-                                                            <tr key={item.id}>
-                                                                <td className="text-center font-bold text-slate-300">{idx+1}</td>
-                                                                <td>
-                                                                    <input 
-                                                                        value={item.name} 
-                                                                        onChange={e => handleFormulaItem(item.id, 'name', e.target.value, cat)} 
-                                                                        className="ghost-input text-left px-4 font-black text-slate-800 text-lg w-full" 
-                                                                        placeholder="원료명을 입력하세요" 
-                                                                    />
-                                                                </td>
-                                                                <td className="bg-amber-50/20">
-                                                                    <input type="number" step="0.0001" value={item.weight} onChange={e => handleFormulaItem(item.id, 'weight', e.target.value, cat)} className="ghost-input font-black text-amber-800 text-lg" />
-                                                                </td>
-                                                                <td className="bg-emerald-50/20">
-                                                                    <div className="flex items-center justify-center gap-1">
-                                                                        <input type="number" step="0.001" value={item.ratio} onChange={e => handleFormulaItem(item.id, 'ratio', e.target.value, cat)} className="ghost-input font-black text-emerald-800 text-lg w-28" />
-                                                                        <span className="text-emerald-400 font-black text-sm">%</span>
-                                                                    </div>
-                                                                </td>
-                                                                <td className="p-3 text-center">
-                                                                    {v.status !== 'none' ? (
-                                                                        <div className="flex flex-col items-center gap-1.5 w-full">
-                                                                            <div className="flex items-center gap-2">
-                                                                                <span className={`v-status ${v.status === 'fail' ? 'v-status-fail' : 'v-status-pass'}`}>
-                                                                                    {v.status === 'fail' ? '⚠️ 기준치 초과' : '✅ 적합'}
-                                                                                </span>
-                                                                                <span className="v-numbers">현재 {v.current} / 한도 {v.limit}</span>
-                                                                            </div>
-                                                                            {v.warning && (
-                                                                                <div className="text-[11px] text-amber-800 bg-amber-50 border border-amber-100 p-2 rounded w-full text-left font-bold leading-tight whitespace-pre-wrap">
-                                                                                    {v.warning}
-                                                                                </div>
-                                                                            )}
-                                                                        </div>
-                                                                    ) : <span className="text-slate-300">-</span>}
-                                                                </td>
-                                                                <td className="text-center no-print px-4">
-                                                                    <button onClick={() => updateData({items: current.items.filter(i=>i.id!==item.id)})} className="trash-btn">×</button>
-                                                                </td>
-                                                            </tr>
-                                                        );
-                                                    })}
-                                                    {/* 합계 라인 디자인 개선 */}
-                                                    <tr className="total-row h-20">
-                                                        <td colSpan={2} className="total-label">배합 결과 요약</td>
-                                                        <td className="text-center total-value border-x border-white">{totalW.toFixed(2)} g</td>
-                                                        <td className="text-center total-value text-indigo-600 border-x border-white">{items.reduce((a, b) => a + Number(b.ratio || 0), 0).toFixed(3)} %</td>
-                                                        <td colSpan={2} className="text-center">
-                                                            <span className={`px-4 py-1.5 rounded-full font-black text-xs ${Math.abs(items.reduce((a,b)=>a+Number(b.ratio||0),0)-100) < 0.1 ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
-                                                                {Math.abs(items.reduce((a,b)=>a+Number(b.ratio||0),0)-100) < 0.1 ? '정상 배합 확인됨' : '배합비 비율 조정 필요'}
-                                                            </span>
-                                                        </td>
-                                                    </tr>
-                                                </tbody>
-                                            </table>
-                                            <div className="p-8 bg-white no-print border-t border-slate-50 flex justify-between items-center">
-                                                <button onClick={() => updateData({items: [...current.items, {id: Date.now(), cat, name: "", weight: 0, ratio: 0}]})} className="btn-add">새 원료 항목 추가</button>
-                                                <div className="text-right">
-                                                    <p className="text-xs text-indigo-600 font-black mb-1">✅ 1번 항목 오토밸런싱 활성화 (타 원료 조절 시 1번 항목이 자동 증감되어 총량을 유지합니다)</p>
-                                                    <p className="text-xs text-slate-400 font-bold">※ 아스파탐, 에리스리톨 등 기재 시 법적 필수 주의문구가 자동 표시됩니다.</p>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    );
-                                })
-                            ) : activeTab === "nutrition_worksheet" ? (
-                                <div className="grid grid-cols-1 xl:grid-cols-12 gap-10 items-start animate-in fade-in">
-                                    <div className="xl:col-span-9 card shadow-xl">
-                                        <div className="p-6 border-b border-slate-100 flex items-center gap-3">
-                                            <div className="w-2 h-6 bg-indigo-600 rounded-full"></div>
-                                            <h3 className="font-black text-slate-800 text-base uppercase">영양정보 설계 및 법적 가이드 워크시트</h3>
-                                        </div>
-                                        <table className="formula-table">
-                                            <thead>
-                                                <tr>
-                                                    <th className="w-24">항목</th>
-                                                    <th className="w-44">실험값 / 실측치</th>
-                                                    <th className="w-72">표시결정</th>
-                                                    <th>가이드 및 강조 기준</th>
-                                                    <th className="w-24">결과</th>
-                                                    <th className="w-24">% DV</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {current.items.map((item) => {
-                                                    const res = calculateNutri(item);
-                                                    const per = item.dv > 0 ? Math.round((parseFloat(res) / item.dv) * 100) : 0;
-                                                    return (
-                                                        <tr key={item.id}>
-                                                            <td className="text-center font-black text-slate-700">{item.name}<div className="text-[11px] text-slate-400 font-bold">{item.unit}</div></td>
-                                                            <td><input type="number" step="0.001" value={item.value} onChange={e => updateData({items: current.items.map(it => it.id === item.id ? {...it, value: e.target.value} : it)})} className="input-base" /></td>
-                                                            <td>
-                                                                <div className="flex flex-col gap-2 px-4">
-                                                                    {item.options.map((opt, oIdx) => (
-                                                                        <label key={oIdx} className="flex items-center gap-2 text-[12px] font-bold text-slate-500 cursor-pointer hover:text-indigo-600 transition-all">
-                                                                            <input type="radio" checked={item.selected === oIdx} onChange={() => updateData({items: current.items.map(it => it.id === item.id ? {...it, selected: oIdx} : it)})} className="w-4 h-4 accent-indigo-600" /> {opt}
-                                                                        </label>
-                                                                    ))}
-                                                                </div>
-                                                            </td>
-                                                            <td className="text-[12px] text-slate-500 font-medium px-8 leading-relaxed whitespace-pre-wrap">{item.guide}</td>
-                                                            <td className="text-center font-black text-slate-900 text-xl">{res}</td>
-                                                            <td className="text-center font-black text-indigo-600 text-xl">{per > 0 ? per + '%' : '0%'}</td>
-                                                        </tr>
-                                                    );
-                                                })}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                    <div className="xl:col-span-3">
-                                        <div className="sticky top-10 flex flex-col items-center">
-                                            <p className="text-xs font-black text-slate-400 mb-4 uppercase tracking-widest text-center">실시간 라벨 미리보기</p>
-                                            <div className="nutrition-label card p-6 border-2 border-black shadow-2xl w-[320px] bg-white text-black">
-                                                <div className="text-3xl font-black border-b-[10px] border-black pb-1 mb-2">영양정보</div>
-                                                <div className="flex justify-between items-end border-b-2 border-black pb-1 mb-1">
-                                                    <span className="font-black text-xs">총 내용량 100g</span>
-                                                    <span className="font-black text-2xl tracking-tighter">
-                                                        {current.items.find(i=>i.key==='cal') ? calculateNutri(current.items.find(i=>i.key==='cal')) : 0} kcal
-                                                    </span>
-                                                </div>
-                                                <div className="flex justify-end text-[10px] font-black py-1 border-b border-black">1일 영양성분 기준치에 대한 비율</div>
-                                                {current.items.filter(i=>i.key!=='cal').map(i => {
-                                                    const res = calculateNutri(i);
-                                                    const per = i.dv > 0 ? Math.round((parseFloat(res) / i.dv) * 100) : 0;
-                                                    return (
-                                                        <div key={i.id} className={`flex justify-between py-1.5 border-b border-black font-bold text-[15px] ${['sug', 'sfat', 'tfat'].includes(i.key) ? 'pl-5 text-[14px]' : ''}`}>
-                                                            <span>{i.name} <span className="font-medium ml-1">{res}{i.unit}</span></span>
-                                                            <span>{per > 0 ? per+'%' : (i.key === 'tfat' ? '-' : '0%')}</span>
-                                                        </div>
-                                                    );
-                                                })}
-                                                <div className="text-[10px] mt-4 font-medium leading-tight">1일 영양성분 기준치에 대한 비율(%)은 2,000kcal 기준이므로...</div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            ) : (
-                                <div className="text-center py-40 text-slate-300 font-black uppercase tracking-widest italic">해당 모듈 준비 중입니다.</div>
-                            )}
-                        </div>
-                    </main>
-                </div>
-            );
-        };
-        const root = ReactDOM.createRoot(document.getElementById('root')); root.render(<App />);
-    </script>
-</body>
-</html>
+        {/* 복사 완료 알림 (토스트 메시지) */}
+        {toastMessage && (
+          <div className="absolute bottom-10 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white px-4 py-2 rounded-full text-sm font-medium shadow-lg z-50 whitespace-nowrap">
+            {toastMessage}
+          </div>
+        )}
+        
+      </div>
+    </div>
+  );
+}
